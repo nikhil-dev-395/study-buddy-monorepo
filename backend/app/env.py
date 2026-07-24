@@ -15,5 +15,7 @@ ENV = SimpleNamespace(
     host  = os.getenv("HOST","localhost"),
     port = int(os.getenv("PORT",8000)),
     LOG_LEVEL = os.getenv("LOG_LEVEL","DEBUG"),
-    POSTGRES_URL = os.getenv("POSTGRES_URL")
+    POSTGRES_URL = os.getenv("POSTGRES_URL"),
+    SUPABASE_KEY = os.getenv("SUPABASE_KEY"),
+    SUPABASE_URL = os.getenv("SUPABASE_URL"),
 )
