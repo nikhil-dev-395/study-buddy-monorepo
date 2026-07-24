@@ -9,11 +9,11 @@ export default function Login() {
         <img
           src="src/assets/image.png"
           alt="Study Buddy Icon"
-          className="w-32 h-32 mb-8 object-cover rounded-full"
+          className="w-12 h-12 mb-8 object-cover rounded-full"
         />
 
-        <h1 className="text-4xl font-bold mb-4">Study Buddy ...</h1>
-        <p className="text-lg mb-8 text-center text-slate-400">
+        <h1 className="text-xl font-bold mb-4">Study Buddy ...</h1>
+        <p className="text-sm mb-8 text-center text-slate-400">
           Your ultimate companion for effective studying and productivity.
         </p>
 
