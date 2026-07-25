@@ -2,15 +2,15 @@ import { createContext, useContext, useState } from "react";
 const AuthContext = createContext({
   isLoggedIn: false,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  setIsLoggedIn: (value: boolean) => {},
+  setIsLoggedIn: (_value: boolean) => {},
 });
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   // REMEMBER :  Replace with your actual authentication logic
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   // NOTE :  if we want to use login true environment
-  //   if (!isLoggedIn) {
-  //     setIsLoggedIn(true);
-  //   }
+  if (!isLoggedIn) {
+    setIsLoggedIn(true);
+  }
   return (
     <AuthContext.Provider value={{ isLoggedIn, setIsLoggedIn }}>
       {children}
