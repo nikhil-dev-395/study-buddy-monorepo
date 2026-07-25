@@ -1,9 +1,12 @@
 import { RouterProvider } from "react-router-dom";
 import { router } from "./routes";
+import { AuthProvider } from "./context/AuthProvider";
 function App() {
   return (
     <div className="App py-10 px-10  bg-black text-white min-h-screen ">
-      <RouterProvider router={router} />
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
     </div>
   );
 }
