@@ -1,5 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
-import { CiHome, CiUser, CiLogin, CiLogout, CiSearch } from "react-icons/ci";
+import { Link } from "react-router-dom";
+import { CiHome, CiLogin, CiSearch } from "react-icons/ci";
 import { FaSearchMinus } from "react-icons/fa";
 
 import { useState } from "react";
@@ -10,14 +10,8 @@ type NavbarProps = {
   onLogout: () => void;
 };
 
-export default function Navbar({ isLoggedIn, onLogout }: NavbarProps) {
-  const navigate = useNavigate();
+export default function Navbar({ isLoggedIn }: NavbarProps) {
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
-
-  const handleLogout = () => {
-    onLogout();
-    navigate("/login");
-  };
 
   return (
     <header className="sticky top-0 z-50">
