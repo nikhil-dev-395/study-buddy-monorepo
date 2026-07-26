@@ -19,3 +19,8 @@ def init_db():
         logger.info("Database tables created successfully.")
     except Exception as e:
         logger.error(f"Error creating database tables: {e}")
+
+
+def  get_session():
+    with Session(engine) as session:
+        yield session
