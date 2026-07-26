@@ -10,6 +10,8 @@ from app.env import ENV
 engine = create_engine(ENV.POSTGRES_URL,echo=True)
 
 
+print(ENV.POSTGRES_URL)
+
 def init_db():
     try:
         SQLModel.metadata.create_all(engine)

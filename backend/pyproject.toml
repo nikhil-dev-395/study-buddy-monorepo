@@ -15,7 +15,9 @@ dependencies = [
     "supabase (>=2.31.0,<3.0.0)",
     "bcrypt (>=5.0.0,<6.0.0)",
     "sqlmodel (>=0.0.39,<0.0.40)",
-    "psycopg2 (>=2.9.12,<3.0.0)"
+    "psycopg2 (>=2.9.12,<3.0.0)",
+    "requests (>=2.34.2,<3.0.0)",
+    "alembic (>=1.18.5,<2.0.0)"
 ]
 
 [tool.poetry]
@@ -24,3 +26,12 @@ package-mode = false
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poe.tasks]
+dev = "uvicorn app.main:app --reload --port 8000"
+
+
+[dependency-groups]
+dev = [
+    "poethepoet (>=0.48.0,<0.49.0)"
+]
