@@ -1,4 +1,3 @@
-# app/utils/api/api_response.py
 from typing import Any, Optional
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -18,9 +17,6 @@ class ApiResponse:
         data: Optional[Any] = None,
         metadata: Optional[Any] = None
     ) -> JSONResponse:
-        # If SQLModel/Pydantic models are passed in data, convert them to dict
-        if hasattr(data, "model_dump"):
-            data = data.model_dump()
 
         response = TypeApiResponse(
             status="success",

@@ -1,6 +1,8 @@
 ## authentication
 
-[ ] google authentication
-[ ] create operation
-[ ] update profile
-[ ] 
+- [ ] google authentication
+- [ ] create operation
+- [ ] update profile
+- [ ] get user profile
+
+## search

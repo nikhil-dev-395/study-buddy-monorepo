@@ -2,7 +2,7 @@
 
 from sqlmodel import Session,select
 from typing import List, Optional
-from app.models.user_model import User, UserBase
+from app.models.user_model import User, UserBase, UserRead
 
 
 class UserRepository:
@@ -16,15 +16,14 @@ class UserRepository:
         self.session.refresh(user)
         return user
 
-    def get_user_by_id(self, user_id: int) -> Optional[UserBase]:
-        statement = select(UserBase).where(UserBase.id == user_id)
+    def get_user_by_id(self, user_id: int) -> Optional[User]:
+        statement = select(User).where(User.id == user_id)
         result = self.session.exec(statement).first()
         return result
 
-    def get_all_users(self) -> List[UserBase]:
-        statement = select(UserBase)
-        result = self.session.exec(statement).all()
-        return result
+    def get_all_users(self) -> list[User]:
+       statement = select(User)
+       return list(self.session.exec(statement).all())
 
     def get_user_by_email(self, email: str) -> Optional[User]:
         statement = select(User).where(User.email == email)

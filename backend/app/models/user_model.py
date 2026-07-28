@@ -24,5 +24,5 @@ class UserCreate(UserBase):
 
 # 4. Response schema
 class UserRead(UserBase):
-    id: int
+    id: Optional[int]
     created_at: datetime
