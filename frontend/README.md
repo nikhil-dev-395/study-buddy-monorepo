@@ -1,4 +1,5 @@
 - [[live site -  on netlify]](https://study-buddy-edu.netlify.app/)
+- [[live site - cloudflare]](https://study-buddy.nikhilw395.workers.dev/)
 
 ## Expanding the ESLint configuration
 
