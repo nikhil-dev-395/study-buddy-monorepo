@@ -31,7 +31,4 @@ StudyBuddy is a minimalist, high-trust platform designed to help students and wo
   <img alt="chart" src="https://shieldcn.dev/chart/github/commits/nikhil-dev-395.svg?theme=blue&amp;font=geist-mono" />
 </p>
 
-<p align="center">
-  <a href="https://github.com/vercel/next.js/graphs/contributors"><img alt="contributors" src="https://shieldcn.dev/contributors/vercel/next.js.svg?mode=dark" /></a>
-</p>
 
