@@ -1,6 +1,16 @@
 - [[live site -  on netlify]](https://study-buddy-edu.netlify.app/)
 - [[live site - cloudflare]](https://study-buddy.nikhilw395.workers.dev/)
 
+## styling
+
+- Glassmorphism Backdrop: Uses bg-zinc-900/60 and backdrop-blur-md for a modern dark-mode feel matching your app's dark theme (bg-black).
+
+- Micro-Details: Includes an ID badge (#123), active status indicator dot, and SVG location icon.
+
+- Safe Avatar Fallback: Automatically switches to an initial avatar (e.g., "N") if the image URL fails to load.
+
+- Hover State: Subtly shifts the border glow when hovered for smooth feedback.
+
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:

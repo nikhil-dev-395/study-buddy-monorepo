@@ -1,24 +1,35 @@
-import LoginButton from "../components/login/LoginButton";
+import { GoogleLogin } from "@react-oauth/google";
+import { jwtDecode } from "jwt-decode";
+import { useAuth } from "../context/AuthProvider";
+import  type { GoogleUser } from "../context/AuthProvider";
+import { useNavigate } from "react-router-dom";
 
-export default function Login() {
+export default function LoginPage() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleSuccess = (credentialResponse: any) => {
+    if (credentialResponse.credential) {
+      // Decode the secure JWT from Google
+      const decodedUser = jwtDecode<GoogleUser>(credentialResponse.credential);
+
+      // Save it globally into your context
+      login(decodedUser);
+
+      // Redirect the user to the dashboard or home page
+      navigate("/");
+    }
+  };
+
   return (
-    <>
-      <div className="flex flex-col justify-center items-center max-h-screen">
-        {/* we will study buddy icon later */}
-
-        <img
-          src="src/assets/image.png"
-          alt="Study Buddy Icon"
-          className="w-12 h-12 mb-8 object-cover rounded-full"
-        />
-
-        <h1 className="text-xl font-bold mb-4">Study Buddy ...</h1>
-        <p className="text-sm mb-8 text-center text-slate-400">
-          Your ultimate companion for effective studying and productivity.
-        </p>
-
-        <LoginButton />
-      </div>
-    </>
+    <div
+      style={{ display: "flex", justifyContent: "center", marginTop: "100px" }}
+    >
+      <GoogleLogin
+        onSuccess={handleSuccess}
+        onError={() => console.log("Login Failed")}
+      />
+    </div>
   );
 }

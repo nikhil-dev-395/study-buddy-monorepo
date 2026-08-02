@@ -1,18 +1,31 @@
 import { createContext, useContext, useState } from "react";
-const AuthContext = createContext({
-  isLoggedIn: false,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  setIsLoggedIn: (_value: boolean) => {},
-});
+export interface GoogleUser {
+  name: string;
+  email: string;
+  picture: string;
+  sub: string; // Unique Google ID
+}
+interface AuthContextType {
+  user: GoogleUser | null;
+  login: (userData: GoogleUser) => void;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // REMEMBER :  Replace with your actual authentication logic
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  // NOTE :  if we want to use login true environment
-  if (!isLoggedIn) {
-    setIsLoggedIn(true);
-  }
+  const [user, setUser] = useState<GoogleUser | null>(null);
+
+  const login = (userData: GoogleUser) => {
+    setUser(userData);
+  };
+
+  const logout = () => {
+    setUser(null);
+  };
+
   return (
-    <AuthContext.Provider value={{ isLoggedIn, setIsLoggedIn }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

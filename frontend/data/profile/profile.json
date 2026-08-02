@@ -1,0 +1,59 @@
+{
+    "id": "usr_9182",
+    "name": "Alex Rivera",
+    "username": "alexrivera_dev",
+    "trustScore": "Verified Contributor",
+    "proofOfWork": {
+        "github": {
+            "username": "alexrivera",
+            "topRepo": "distributed-cache-go",
+            "stars": 142,
+            "url": "https://github.com/alexrivera"
+        },
+        "medium": {
+            "username": "@alexrivera_cs",
+            "articlesCount": 5,
+            "url": "https://medium.com/@alexrivera_cs"
+        },
+        "dribbble": {
+            "username": "alex_design",
+            "url": "https://dribbble.com/alex_design"
+        },
+        "devTo": {
+            "username": "alexrivera",
+            "url": "https://dev.to/alexrivera"
+        },
+        "kaggle": {
+            "username": "alexrivera_ml",
+            "tier": "Expert",
+            "url": "https://kaggle.com/alexrivera_ml"
+        },
+        "personalWebsite": "https://alexrivera.dev"
+    },
+    "featuredPosts": [
+        {
+            "id": "post_1",
+            "platform": "Medium",
+            "title": "Understanding Consistent Hashing in Distributed Systems",
+            "url": "https://medium.com/@alexrivera_cs/consistent-hashing",
+            "claps": 320,
+            "date": "Jul 2026"
+        },
+        {
+            "id": "post_2",
+            "platform": "GitHub",
+            "title": "distributed-cache-go (Open Source Redis Clone)",
+            "url": "https://github.com/alexrivera/distributed-cache-go",
+            "stars": 142,
+            "date": "Jun 2026"
+        },
+        {
+            "id": "post_3",
+            "platform": "Dribbble",
+            "title": "Minimalist Study Buddy UI Design System",
+            "url": "https://dribbble.com/shots/study-buddy-ui",
+            "likes": 89,
+            "date": "May 2026"
+        }
+    ]
+}
