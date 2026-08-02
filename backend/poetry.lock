@@ -754,6 +754,35 @@ files = [
 ]
 
 [[package]]
+name = "google-auth"
+version = "2.56.2"
+description = "Google Authentication Library"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "google_auth-2.56.2-py3-none-any.whl", hash = "sha256:c8270ea95b2697b74e3d8438ae9c5b898e38b623b915c7b5c5635921e7de68a6"},
+    {file = "google_auth-2.56.2.tar.gz", hash = "sha256:e28f103ca8091fb7012b99c44243d7366c29863713b8e34a220c3322b7a07051"},
+]
+
+[package.dependencies]
+cryptography = {version = ">=41.0.5", markers = "python_version >= \"3.14\""}
+pyasn1-modules = ">=0.2.1"
+
+[package.extras]
+aiohttp = ["aiohttp (>=3.8.0,<4.0.0) ; python_version < \"3.14\"", "aiohttp (>=3.9.0,<4.0.0) ; python_version >= \"3.14\"", "requests (>=2.30.0,<3.0.0)"]
+cryptography = ["cryptography (>=38.0.3) ; python_version < \"3.14\"", "cryptography (>=41.0.5) ; python_version >= \"3.14\""]
+enterprise-cert = ["cryptography (>=38.0.3) ; python_version < \"3.14\"", "cryptography (>=41.0.5) ; python_version >= \"3.14\""]
+grpc = ["grpcio (>=1.59.0,<2.0.0) ; python_version < \"3.14\"", "grpcio (>=1.75.1,<2.0.0) ; python_version >= \"3.14\""]
+pyjwt = ["pyjwt (>=2.0)"]
+pyopenssl = ["cryptography (>=38.0.3) ; python_version < \"3.14\"", "cryptography (>=41.0.5) ; python_version >= \"3.14\""]
+reauth = ["pyu2f (>=0.1.5)"]
+requests = ["requests (>=2.30.0,<3.0.0)"]
+rsa = ["rsa (>=4.0.0,<5)"]
+testing = ["aiohttp (>=3.8.0,<4.0.0) ; python_version < \"3.14\"", "aiohttp (>=3.9.0,<4.0.0) ; python_version >= \"3.14\"", "aioresponses", "flask", "freezegun", "grpcio (>=1.59.0,<2.0.0) ; python_version < \"3.14\"", "grpcio (>=1.75.1,<2.0.0) ; python_version >= \"3.14\"", "packaging (>=20.0)", "pyjwt (>=2.0)", "pytest", "pytest-asyncio", "pytest-cov", "pytest-localserver", "pyu2f (>=0.1.5)", "requests (>=2.30.0,<3.0.0)", "responses", "urllib3 (>=1.26.15,<3.0.0)"]
+urllib3 = ["packaging (>=20.0)", "urllib3 (>=1.26.15,<3.0.0)"]
+
+[[package]]
 name = "greenlet"
 version = "3.5.3"
 description = "Lightweight in-process concurrent programming"
@@ -1559,6 +1588,33 @@ files = [
     {file = "psycopg2-2.9.12-cp39-cp39-win_amd64.whl", hash = "sha256:09826a6b89714626a662275d03f21639f1c68d183e2dcc9ba134d463a3da753e"},
     {file = "psycopg2-2.9.12.tar.gz", hash = "sha256:1dedb1c7a1d8552c4a6044c6b1c41a52e6a8e2d144af83eccac758076b1b7c15"},
 ]
+
+[[package]]
+name = "pyasn1"
+version = "0.6.4"
+description = "Pure-Python implementation of ASN.1 types and DER/BER/CER codecs (X.208)"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "pyasn1-0.6.4-py3-none-any.whl", hash = "sha256:deda9277cfd454080ec40b207fb6df82206a3a2688735233cdcd8d3d565f088b"},
+    {file = "pyasn1-0.6.4.tar.gz", hash = "sha256:9c447d8431c947fe4c8febc4ed9e760bc29011a5b01e5c74b67025bd9fb8ce81"},
+]
+
+[[package]]
+name = "pyasn1-modules"
+version = "0.4.2"
+description = "A collection of ASN.1-based protocols modules"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "pyasn1_modules-0.4.2-py3-none-any.whl", hash = "sha256:29253a9207ce32b64c3ac6600edc75368f98473906e8fd1043bd6b5b1de2c14a"},
+    {file = "pyasn1_modules-0.4.2.tar.gz", hash = "sha256:677091de870a80aae844b1ca6134f54652fa2c8c5a52aa396440ac3106e941e6"},
+]
+
+[package.dependencies]
+pyasn1 = ">=0.6.1,<0.7.0"
 
 [[package]]
 name = "pycparser"
@@ -2939,4 +2995,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.14"
-content-hash = "9fbb95e180d1bcf82bd678b41b16ab1a44c751a09ee482f1f9fe1250cb11b777"
+content-hash = "1c69db812314652c2b2c451fd7807b58a54373bb7d1611701f8890758156e47a"

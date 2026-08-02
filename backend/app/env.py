@@ -18,4 +18,5 @@ ENV = SimpleNamespace(
     POSTGRES_URL = os.getenv("POSTGRES_URL"),
     SUPABASE_KEY = os.getenv("SUPABASE_KEY"),
     SUPABASE_URL = os.getenv("SUPABASE_URL"),
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY","UFsIDTnFmyG3n"),
 )

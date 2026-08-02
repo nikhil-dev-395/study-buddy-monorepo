@@ -76,3 +76,25 @@
 - [ ] Profile avatars
 - [ ] Responsive UI
 - [ ] Deployment
+
+
+
+### google auth architecture
+```
+Frontend (React)
+      |
+      | 1. User clicks "Sign in with Google"
+      ↓
+Google OAuth
+      |
+      | 2. Returns Google ID token
+      ↓
+Frontend sends token to FastAPI
+      |
+      | 3. Verify token
+      ↓
+FastAPI creates/finds user
+      |
+      | 4. Returns your own JWT access token
+
+```

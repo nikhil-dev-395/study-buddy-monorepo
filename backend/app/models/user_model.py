@@ -11,11 +11,19 @@ def get_utc_now() -> datetime:
 class UserBase(SQLModel):
     username: str
     email: EmailStr = Field(unique=True, index=True)
+    avatar_url: Optional[str] = None
     time_zone: str = "UTC"
 
 # 2. Database table model
 class User(UserBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    google_id: Optional[str] = Field(
+        default=None,
+        unique=True,
+        index=True
+    )
+    avatar_url: Optional[str] = None
+
     created_at: datetime = Field(default_factory=get_utc_now)
 
 # 3. Request schema
@@ -26,3 +34,9 @@ class UserCreate(UserBase):
 class UserRead(UserBase):
     id: Optional[int]
     created_at: datetime
+
+
+class AuthResponse(SQLModel):
+    user: UserRead
+    access_token: str
+    token_type: str = "bearer"
