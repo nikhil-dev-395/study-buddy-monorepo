@@ -9,7 +9,8 @@ lerna-debug.log*
 
 # build
 dist
-
+.env*
+/home/nikhil/code/study-buddy/frontend/.env
 # env
 .env
 
@@ -34,3 +35,5 @@ dist-ssr
 .dev.vars*
 !.dev.vars.example
 !.env.example
+.env
+.env
