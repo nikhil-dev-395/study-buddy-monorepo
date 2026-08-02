@@ -8,6 +8,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSuccess = (credentialResponse: any) => {
     if (credentialResponse.credential) {
       // Decode the secure JWT from Google

@@ -35,7 +35,7 @@ export default function UserResult({
   company,
   userType = "student",
   subjects = [],
-  mode = "online",
+ 
   isSearching = true,
   isRequestAccepted,
   onConnect,
