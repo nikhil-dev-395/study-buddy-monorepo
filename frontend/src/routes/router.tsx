@@ -6,6 +6,8 @@ import Layout from "./Layout";
 import { ProtectedRoute } from "./protectedroute";
 import { AuthProvider } from "../context/AuthProvider";
 import SearchPage from "../pages/Search";
+import BuddiesPage from "../pages/Buddies";
+import ProfilePage from "../pages/Profile";
 
 export const router = createBrowserRouter([
   {
@@ -35,6 +37,8 @@ export const router = createBrowserRouter([
           },
           // Add extra protected routes here:
           { path: "/search", element: <SearchPage /> },
+          { path: "/my-buddies", element: <BuddiesPage /> },
+          { path: "/profile", element: <ProfilePage /> },
         ],
       },
       // 404 Route

@@ -5,8 +5,6 @@ export type UserResultProps = {
   userId: string | number | null;
   location: string;
   avatarUrl: string;
-  bio?: string;
-
   // Student fields
   institution?: string;
   major?: string;
@@ -20,6 +18,7 @@ export type UserResultProps = {
   subjects?: string[];
   mode?: "online" | "in-person" | "hybrid";
   isSearching?: boolean;
+  isRequestAccepted?: boolean;
   onConnect?: (userId: string | number | null) => void;
 };
 
@@ -28,7 +27,7 @@ export default function UserResult({
   userId,
   location,
   avatarUrl,
-  bio,
+
   institution,
   major,
   year,
@@ -38,6 +37,7 @@ export default function UserResult({
   subjects = [],
   mode = "online",
   isSearching = true,
+  isRequestAccepted,
   onConnect,
 }: UserResultProps) {
   const [imgError, setImgError] = useState(false);
@@ -48,12 +48,6 @@ export default function UserResult({
     userType === "professional" || role
       ? [role, company].filter(Boolean).join(" @ ") || "Professional"
       : [major, year, institution].filter(Boolean).join(" • ") || "Learner";
-
-  const modeStyles = {
-    online: "bg-sky-500/10 text-sky-400 border-sky-500/20",
-    "in-person": "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    hybrid: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  };
 
   return (
     <div className="w-full max-w-md mx-auto mt-4 p-5 rounded-2xl bg-zinc-900/70 border border-zinc-800/80 backdrop-blur-md shadow-lg transition-all duration-300 hover:border-zinc-700/80 hover:shadow-zinc-900/50">
@@ -76,7 +70,7 @@ export default function UserResult({
             )}
             <span
               className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full ring-2 ring-zinc-900 ${
-                isSearching ? "bg-white/80" : "bg-zinc-500"
+                isSearching ? "bg-emerald-500" : "bg-zinc-500"
               }`}
               title={
                 isSearching ? "Actively looking for study partner" : "Away"
@@ -106,20 +100,11 @@ export default function UserResult({
 
         {/* Study Mode Badge */}
         <span
-          className={`shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full border capitalize ${
-            modeStyles[mode] || modeStyles.online
-          }`}
+          className={`shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full border capitalize`}
         >
-          {mode}
+          {isRequestAccepted ? "chat" : "not connected"}
         </span>
       </div>
-
-      {/* Bio */}
-      {bio && (
-        <p className="mt-3 text-xs text-zinc-400 line-clamp-2 leading-relaxed font-normal">
-          {bio}
-        </p>
-      )}
 
       {/* Subject Badges */}
       {subjects.length > 0 && (
@@ -127,7 +112,7 @@ export default function UserResult({
           {subjects.map((subject, idx) => (
             <span
               key={idx}
-              className="text-[11px] px-2.5 py-1 rounded-md bg-zinc-800/80 text-emerald-400 border border-emerald-500/20 font-medium"
+              className="text-[11px] px-2.5 py-1 rounded-md bg-zinc-800/80 text-slate-400 border border-gray-500/20 font-medium"
             >
               {subject}
             </span>
@@ -162,9 +147,9 @@ export default function UserResult({
 
         <button
           onClick={() => onConnect?.(userId)}
-          className="px-3 py-1.5 rounded-lg bg-white hover:bg-emerald-400 text-zinc-950 font-semibold text-xs transition-colors shadow-sm active:scale-95"
+          className="px-3 py-1.5 rounded-lg bg-gray-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs transition-colors shadow-sm active:scale-95"
         >
-          Connect
+          {isRequestAccepted ? "Connected" : "not Connected"}
         </button>
       </div>
     </div>

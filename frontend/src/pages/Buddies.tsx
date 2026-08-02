@@ -1,7 +1,7 @@
-import UserResult from "./User";
-import dummyUsers from "../../../data/search/user/user.json";
+import UserResult from "../components/buddies/user/User";
+import dummyUsers from "../../data/search/user/user.json";
 
-export default function SearchResult() {
+export default function BuddiesPage() {
   return (
     <div className="mt-6 flex flex-col gap-4 max-w-md mx-auto">
       {dummyUsers.map((user) => (
@@ -10,7 +10,6 @@ export default function SearchResult() {
           userId={user.id}
           name={user.name}
           avatarUrl={user.avatarUrl}
-          bio={user.bio}
           location={user.location}
           // Safely access nested academic details for students
           institution={user.academicDetails?.institution}
@@ -22,6 +21,7 @@ export default function SearchResult() {
             user.studyPreferences?.mode as "online" | "in-person" | "hybrid"
           }
           isSearching={user.status?.isSearching}
+          isRequestAccepted={user.isRequestAccepted}
         />
       ))}
     </div>

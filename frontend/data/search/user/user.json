@@ -1,0 +1,105 @@
+[
+    {
+        "id": "usr_101",
+        "name": "Priya Sharma",
+        "avatarUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=250",
+        "bio": "Pre-med student studying Organic Chemistry and Biochemistry. Love using flashcards and active recall.",
+        "academicDetails": {
+            "institution": "University of Toronto",
+            "major": "Biochemistry",
+            "year": "Sophomore"
+        },
+        "studyPreferences": {
+            "subjects": [
+                "Organic Chemistry",
+                "Biochemistry",
+                "Biology"
+            ],
+            "mode": "online",
+            "timeZone": "EST (UTC-5)",
+            "availability": [
+                "Mon/Wed Afternoons",
+                "Sunday All Day"
+            ],
+            "goal": "MCAT Preparation"
+        },
+        "location": "Toronto, Canada",
+        "socials": {
+            "discord": "priya_med",
+            "linkedin": "priya-sharma-med"
+        },
+        "status": {
+            "isSearching": true,
+            "lastActive": "Just now"
+        },
+        "isRequestAccepted": true
+    },
+    {
+        "id": "usr_102",
+        "name": "Marcus Vance",
+        "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250",
+        "bio": "Preparing for AWS Certified Solutions Architect. Prefer silent accountability study sessions on Zoom/Discord.",
+        "academicDetails": {
+            "institution": "Self-Taught / Professional",
+            "major": "Cloud Engineering",
+            "year": "Graduate"
+        },
+        "studyPreferences": {
+            "subjects": [
+                "AWS",
+                "Docker",
+                "DevOps"
+            ],
+            "mode": "online",
+            "timeZone": "CST (UTC-6)",
+            "availability": [
+                "Weekdays 8 PM - 10 PM"
+            ],
+            "goal": "Certification Exam"
+        },
+        "location": "Austin, TX",
+        "socials": {
+            "github": "marcusvance-dev",
+            "discord": "cloud_marcus"
+        },
+        "status": {
+            "isSearching": true,
+            "lastActive": "2 hours ago"
+        },
+        "isRequestAccepted": true
+    },
+    {
+        "id": "usr_103",
+        "name": "Sarah Chen",
+        "avatarUrl": "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=250",
+        "bio": "Calculus II and Physics student. Looking for campus study groups at the library.",
+        "academicDetails": {
+            "institution": "University of Washington",
+            "major": "Mechanical Engineering",
+            "year": "Freshman"
+        },
+        "studyPreferences": {
+            "subjects": [
+                "Calculus II",
+                "Physics I",
+                "Linear Algebra"
+            ],
+            "mode": "in-person",
+            "timeZone": "PST (UTC-8)",
+            "availability": [
+                "Tue/Thu Mornings"
+            ],
+            "goal": "Coursework & Homework"
+        },
+        "location": "Seattle, WA",
+        "socials": {
+            "discord": "schen_math",
+            "linkedin": "sarah-chen-eng"
+        },
+        "status": {
+            "isSearching": false,
+            "lastActive": "1 day ago"
+        },
+        "isRequestAccepted": false
+    }
+]
