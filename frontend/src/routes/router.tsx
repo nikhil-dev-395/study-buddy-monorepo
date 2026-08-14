@@ -8,6 +8,8 @@ import { AuthProvider } from "../context/AuthProvider";
 import SearchPage from "../pages/Search";
 import BuddiesPage from "../pages/Buddies";
 import ProfilePage from "../pages/Profile";
+import ChatPage from "../pages/Chat";
+import SessionsPage from "../pages/Sessions";
 
 export const router = createBrowserRouter([
   {
@@ -39,6 +41,8 @@ export const router = createBrowserRouter([
           { path: "/search", element: <SearchPage /> },
           { path: "/my-buddies", element: <BuddiesPage /> },
           { path: "/profile", element: <ProfilePage /> },
+          { path: "/chat", element: <ChatPage /> },
+          { path: "/session", element: <SessionsPage /> },
         ],
       },
       // 404 Route

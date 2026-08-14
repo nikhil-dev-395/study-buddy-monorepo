@@ -1,24 +1,20 @@
-import { GoogleLogin } from "@react-oauth/google";
-import { jwtDecode } from "jwt-decode";
-import { useAuth } from "../context/AuthProvider";
-import  type { GoogleUser } from "../context/AuthProvider";
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
+import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleSuccess = (credentialResponse: any) => {
+  const handleSuccess = async (credentialResponse: CredentialResponse) => {
     if (credentialResponse.credential) {
-      // Decode the secure JWT from Google
-      const decodedUser = jwtDecode<GoogleUser>(credentialResponse.credential);
-
-      // Save it globally into your context
-      login(decodedUser);
-
-      // Redirect the user to the dashboard or home page
-      navigate("/");
+      try {
+        await loginWithGoogle(credentialResponse.credential);
+        navigate("/"); // Redirect to home/dashboard on success
+      } catch (err) {
+        console.log("Login failed:", err);
+        alert("Authentication failed. Check backend connection.");
+      }
     }
   };
 
@@ -28,7 +24,7 @@ export default function LoginPage() {
     >
       <GoogleLogin
         onSuccess={handleSuccess}
-        onError={() => console.log("Login Failed")}
+        onError={() => console.error("Google Login Failed")}
       />
     </div>
   );
