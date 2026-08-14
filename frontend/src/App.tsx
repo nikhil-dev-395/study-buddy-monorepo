@@ -5,7 +5,7 @@ function App() {
   return (
     <div className="App py-10 px-10  bg-black text-white min-h-screen ">
       {/* <AuthProvider> */}
-        <RouterProvider router={router} />
+      <RouterProvider router={router} />
       {/* </AuthProvider> */}
     </div>
   );
