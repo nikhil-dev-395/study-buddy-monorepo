@@ -22,17 +22,18 @@ class User(UserBase, table=True):
         unique=True,
         index=True
     )
-    avatar_url: Optional[str] = None
+   
 
     created_at: datetime = Field(default_factory=get_utc_now)
 
 # 3. Request schema
 class UserCreate(UserBase):
-    pass
+    google_id: Optional[str] = None
 
 # 4. Response schema
 class UserRead(UserBase):
     id: Optional[int]
+    google_id: Optional[str] = None
     created_at: datetime
 
 
