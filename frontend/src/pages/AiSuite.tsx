@@ -5,11 +5,11 @@ import {
   FiFileText,
   FiMessageSquare,
   FiSend,
-  FiClock,
+
   FiCheckCircle,
-  FiXCircle,
+
   FiRefreshCw,
-  FiCalendar,
+
   FiCpu,
   FiZap,
   FiChevronRight,
@@ -24,7 +24,9 @@ export default function AiSuitePage() {
   // --- AI 1: Roadmap State ---
   const [goal, setGoal] = useState("Build full-stack app with FastAPI & React");
   const [days, setDays] = useState("30");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isGeneratingRoadmap, setIsGeneratingRoadmap] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
   const [roadmapResult, setRoadmapResult] = useState<any[]>([
     {
       phase: "Phase 1 (Days 1–10): Backend Fundamentals",
@@ -56,6 +58,7 @@ export default function AiSuitePage() {
   ]);
 
   // --- AI 2: Quiz State ---
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [quizTopic, setQuizTopic] = useState("FastAPI & System Design");
   const [quizScore, setQuizScore] = useState<number | null>(null);
   const [selectedAnswers, setSelectedAnswers] = useState<

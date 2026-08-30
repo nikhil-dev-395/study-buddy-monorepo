@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   FiSend,
   FiSearch,
-  FiMoreVertical,
+
   FiCheck,
   FiPhone,
   FiVideo,
@@ -144,7 +144,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (MOCK_MESSAGES_MAP[activeConvId]) {
-      setMessages(MOCK_MESSAGES_MAP[activeConvId]);
+      setMessages(MOCK_MESSAGES_MAP[activeConvId] ?? []);
     } else {
       setMessages([]);
     }

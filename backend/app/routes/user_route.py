@@ -53,18 +53,28 @@ def create_user(
 
 
 
-@router.get("/all", response_model=list[UserRead])
-def get_all_users(
-    session: Session = Depends(get_session)
-):
+# @router.get("/all")
+# def get_all_users(session: Session = Depends(get_session)):
+#     repo = UserRepository(session)
+#     users = repo.get_all_users()
+#     print("Users found:", len(users), users)
+#     return ApiResponse.success(
+#         message="Users retrieved successfully",
+#         status_code=status.HTTP_200_OK,
+#         data=[UserRead.model_validate(u).model_dump(mode="json") for u in users]
+#     )
+
+
+@router.get("/all")
+def get_all_users(session: Session = Depends(get_session)):
     repo = UserRepository(session)
+    print("at leeast call")
     users = repo.get_all_users()
     return ApiResponse.success(
         message="Users retrieved successfully",
         status_code=status.HTTP_200_OK,
-        data=[UserRead.model_validate(user).model_dump(mode="json") for user in users]
+        data=[UserRead.model_validate(u).model_dump(mode="json") for u in users]
     )
-
 @router.get("/{user_id}", response_model=UserRead)
 def get_user(
     user_id: int,

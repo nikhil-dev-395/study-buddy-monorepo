@@ -21,9 +21,9 @@ class UserRepository:
         result = self.session.exec(statement).first()
         return result
 
-    def get_all_users(self) -> list[User]:
-       statement = select(User)
-       return list(self.session.exec(statement).all())
+    def get_all_users(self) -> List[User]:
+        statement = select(User)
+        return list(self.session.exec(statement).all())
 
     def get_user_by_email(self, email: str) -> Optional[User]:
         statement = select(User).where(User.email == email)
