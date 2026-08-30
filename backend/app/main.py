@@ -10,8 +10,8 @@ from app.utils.api.api_error import ApiError
 from app.utils.api.api_response import ApiResponse
 from app.utils.logger import logger
 from app.routes.profile_route import router as profile_router
-
-
+from app.routes.connection_route import router as connection_router
+from app.routes.search_route import router as search_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -32,6 +32,8 @@ app.add_middleware(
 # If it does NOT, add prefix="/users" here: app.include_router(user_router, prefix="/users")
 app.include_router(user_router)
 app.include_router(profile_router)
+app.include_router(connection_router)
+app.include_router(search_router)
 
 @app.get("/")
 async def root():
