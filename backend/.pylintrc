@@ -1,0 +1,14 @@
+[MASTER]
+ignore-paths=^.venv/
+
+[MESSAGES CONTROL]
+disable=
+    missing-module-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+    logging-fstring-interpolation,
+    duplicate-code,
+    too-few-public-methods
+
+[FORMAT]
+max-line-length=120
