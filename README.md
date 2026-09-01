@@ -15,6 +15,7 @@ StudyBuddy is a minimalist, high-trust platform designed to help students and wo
 
 | Feature | Status |
 | --- | --- |
+
 | Skill Matrix | ✅ |
 | Flexible Study Modes | ✅ |
 | Targeted Search: | ✅ |
@@ -30,5 +31,9 @@ StudyBuddy is a minimalist, high-trust platform designed to help students and wo
 <p align="center">
   <img alt="chart" src="https://shieldcn.dev/chart/github/commits/nikhil-dev-395.svg?theme=blue&amp;font=geist-mono" />
 </p>
+
+
+3333
+
 
 
