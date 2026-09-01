@@ -4,13 +4,13 @@ import {
   FiClock,
   FiPlus,
   FiVideo,
-  FiUser,
+
   FiX,
-  FiCheckCircle,
+
   FiSearch,
   FiEdit2,
   FiAlertCircle,
-  FiChevronRight,
+
 } from "react-icons/fi";
 import { HiOutlineSparkles, HiOutlineCheckBadge } from "react-icons/hi2";
 
@@ -80,6 +80,9 @@ const INITIAL_SESSIONS: Session[] = [
   },
 ];
 
+// function randomText(){
+//     return Math.random()
+// }
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>(INITIAL_SESSIONS);
   const [filter, setFilter] = useState<
@@ -108,7 +111,7 @@ export default function SessionsPage() {
     if (!newTitle || !newDate || !newTime) return;
 
     const newEntry: Session = {
-      id: `SES-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: `SES-${Math.floor(1000  * 9000)}`,
       title: newTitle,
       buddyName: newBuddy || "Study Partner",
       buddyAvatar: newBuddy ? newBuddy.substring(0, 2).toUpperCase() : "SP",

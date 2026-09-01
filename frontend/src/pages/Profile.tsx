@@ -1,4 +1,5 @@
-import { useState } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect } from "react";
 import { CiLocationOn, CiClock1, CiPaperplane, CiGlobe } from "react-icons/ci";
 import { MdCalendarToday, MdSubject } from "react-icons/md";
 
@@ -14,104 +15,37 @@ import {
   FaNetworkWired,
 } from "react-icons/fa";
 
-// Dummy profile data matching our extended schema
-const sampleProfile = {
-  id: "usr_9182",
-  name: "Alex Rivera",
-  username: "alexrivera_dev",
-  avatarUrl:
-    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
-  location: "San Francisco, CA",
-  bio: "CS Junior passionate about System Design & High-Performance Computing. Currently grinding LeetCode Mediums and preparing for AWS Cloud Solutions Architect.",
-  userType: "student" as const,
-  academicDetails: {
-    institution: "Stanford University",
-    major: "Computer Science",
-    year: "Junior",
-  },
-  status: {
-    isSearching: true,
-    lastActive: "10 mins ago",
-  },
-  studyPreferences: {
-    mode: "hybrid" as const,
-    timeZone: "PST (UTC-8)",
-    availability: ["Mon/Wed/Fri - Evenings", "Sat - All Day"],
-    learningStyle: "Active Recall & Mock Technical Interviews",
-  },
-  skills: {
-    learning: ["System Design", "Kubernetes", "AWS Architect"],
-    teaching: ["Data Structures", "TypeScript", "Python / FastAPI"],
-  },
-  workExperience: [
-    {
-      role: "Frontend Developer Intern",
-      company: "Vercel",
-      duration: "Jun 2025 - Sep 2025",
-      description:
-        "Worked on Next.js documentation and component accessibility optimizations.",
-    },
-  ],
-  proofOfWork: {
-    github: {
-      username: "alexrivera",
-      topRepo: "distributed-cache-go",
-      stars: 142,
-      url: "https://github.com",
-    },
-    medium: {
-      username: "@alexrivera_cs",
-      articlesCount: 5,
-      url: "https://medium.com",
-    },
-    dribbble: { username: "alex_design", url: "https://dribbble.com" },
-    devTo: { username: "alexrivera", url: "https://dev.to" },
-    kaggle: {
-      username: "alexrivera_ml",
-      tier: "Expert",
-      url: "https://kaggle.com",
-    },
-    personalWebsite: "https://alexrivera.dev",
-  },
-  featuredPosts: [
-    {
-      id: "post_1",
-      platform: "Medium" as const,
-      title: "Understanding Consistent Hashing in Distributed Systems",
-      url: "https://medium.com",
-      claps: 320,
-      date: "Jul 2026",
-    },
-    {
-      id: "post_2",
-      platform: "GitHub" as const,
-      title: "distributed-cache-go (Open Source Redis Clone)",
-      url: "https://github.com",
-      stars: 142,
-      date: "Jun 2026",
-    },
-    {
-      id: "post_3",
-      platform: "Dribbble" as const,
-      title: "Minimalist Study Buddy UI Design System",
-      url: "https://dribbble.com",
-      likes: 89,
-      date: "May 2026",
-    },
-  ],
-  socials: {
-    github: "https://github.com",
-    linkedin: "https://linkedin.com",
-    discord: "alex_cs#1234",
-  },
-};
-
 export default function ProfilePage() {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<"about" | "proof">("about");
   const [imgError, setImgError] = useState(false);
 
-  const user = sampleProfile;
-  const initial = user.name ? user.name.charAt(0).toUpperCase() : "?";
+  useEffect(() => {
+    async function fetchMyProfile() {
+      try {
+        // Read user data from localStorage
+        const storedUser = localStorage.getItem("user");
+        const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+        const currentUserId = parsedUser?.id || 5;
+
+        const response = await fetch(
+          `http://127.0.0.1:8000/profile/full/${currentUserId}`,
+        );
+        const result = await response.json();
+
+        if (result.status === "success" && result.data) {
+          setUser(result.data);
+        }
+      } catch (err) {
+        console.error("Failed to load user profile:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchMyProfile();
+  }, []);
 
   const getPlatformIcon = (platform: string) => {
     switch (platform.toLowerCase()) {
@@ -122,6 +56,7 @@ export default function ProfilePage() {
       case "dribbble":
         return <FaDribbble className="text-pink-400" size={16} />;
       case "dev.to":
+      case "devto":
         return <FaDev className="text-zinc-100" size={16} />;
       case "kaggle":
         return <FaKaggle className="text-sky-400" size={16} />;
@@ -129,6 +64,24 @@ export default function ProfilePage() {
         return <CiGlobe className="text-emerald-400" size={16} />;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto px-4 py-20 text-center text-zinc-400">
+        Loading profile...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="w-full max-w-4xl mx-auto px-4 py-20 text-center text-zinc-400">
+        Profile not found.
+      </div>
+    );
+  }
+
+  const initial = user.name ? user.name.charAt(0).toUpperCase() : "?";
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-8 space-y-6">
@@ -151,10 +104,10 @@ export default function ProfilePage() {
             )}
             <span
               className={`absolute bottom-1 right-1 w-4 h-4 rounded-full ring-4 ring-zinc-900 ${
-                user.status.isSearching ? "bg-emerald-500" : "bg-zinc-500"
+                user.status?.isSearching ? "bg-emerald-500" : "bg-zinc-500"
               }`}
               title={
-                user.status.isSearching
+                user.status?.isSearching
                   ? "Actively looking for study partner"
                   : "Away"
               }
@@ -204,10 +157,10 @@ export default function ProfilePage() {
               </span>
               <span className="flex items-center gap-1">
                 <CiClock1 className="text-zinc-500" size={16} />
-                Active {user.status.lastActive}
+                Active {user.status?.lastActive || "Recently"}
               </span>
               <span className="capitalize px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">
-                {user.studyPreferences.mode} mode
+                {user.studyPreferences?.mode || "hybrid"} mode
               </span>
             </div>
 
@@ -261,11 +214,14 @@ export default function ProfilePage() {
             <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
             Verified Portfolios & Profiles
           </h3>
-          <span className="text-[11px] text-zinc-500">5 Accounts Linked</span>
+          <span className="text-[11px] text-zinc-500">
+            {Object.values(user.proofOfWork || {}).filter(Boolean).length}{" "}
+            Accounts Linked
+          </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          {user.proofOfWork.github && (
+          {user.proofOfWork?.github && (
             <a
               href={user.proofOfWork.github.url}
               target="_blank"
@@ -284,13 +240,15 @@ export default function ProfilePage() {
                   </p>
                 </div>
               </div>
-              <span className="text-[10px] text-amber-400 font-mono">
-                ★ {user.proofOfWork.github.stars}
-              </span>
+              {user.proofOfWork.github.stars !== undefined && (
+                <span className="text-[10px] text-amber-400 font-mono">
+                  ★ {user.proofOfWork.github.stars}
+                </span>
+              )}
             </a>
           )}
 
-          {user.proofOfWork.medium && (
+          {user.proofOfWork?.medium && (
             <a
               href={user.proofOfWork.medium.url}
               target="_blank"
@@ -316,7 +274,7 @@ export default function ProfilePage() {
             </a>
           )}
 
-          {user.proofOfWork.dribbble && (
+          {user.proofOfWork?.dribbble && (
             <a
               href={user.proofOfWork.dribbble.url}
               target="_blank"
@@ -366,7 +324,7 @@ export default function ProfilePage() {
               : "text-zinc-400 hover:text-zinc-200"
           }`}
         >
-          Articles & Work Proofs ({user.featuredPosts.length})
+          Articles & Work Proofs ({user.featuredPosts?.length || 0})
         </button>
       </div>
 
@@ -385,7 +343,7 @@ export default function ProfilePage() {
                 wants to learn / practice:
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {user.skills.learning.map((s, i) => (
+                {user.skills?.learning?.map((s: string, i: number) => (
                   <span
                     key={i}
                     className="text-xs px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium"
@@ -401,7 +359,7 @@ export default function ProfilePage() {
                 can teach / help with:
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {user.skills.teaching.map((s, i) => (
+                {user.skills?.teaching?.map((s: string, i: number) => (
                   <span
                     key={i}
                     className="text-xs px-2.5 py-1 rounded-md bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium"
@@ -423,24 +381,26 @@ export default function ProfilePage() {
             <div>
               <p className="text-xs text-zinc-400 mb-1">Time Zone & Hours</p>
               <p className="text-xs text-zinc-200 font-medium">
-                {user.studyPreferences.timeZone}
+                {user.studyPreferences?.timeZone}
               </p>
               <div className="flex flex-wrap gap-1 mt-2">
-                {user.studyPreferences.availability.map((a, i) => (
-                  <span
-                    key={i}
-                    className="text-[11px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/50"
-                  >
-                    {a}
-                  </span>
-                ))}
+                {user.studyPreferences?.availability?.map(
+                  (a: string, i: number) => (
+                    <span
+                      key={i}
+                      className="text-[11px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/50"
+                    >
+                      {a}
+                    </span>
+                  ),
+                )}
               </div>
             </div>
 
             <div>
               <p className="text-xs text-zinc-400 mb-1">Learning Approach</p>
               <p className="text-xs text-zinc-300 italic">
-                {user.studyPreferences.learningStyle}
+                {user.studyPreferences?.learningStyle}
               </p>
             </div>
           </div>
@@ -453,7 +413,7 @@ export default function ProfilePage() {
             </h3>
 
             <div className="space-y-3">
-              {user.workExperience.map((work, idx) => (
+              {user.workExperience?.map((work: any, idx: number) => (
                 <div
                   key={idx}
                   className="p-3.5 rounded-xl bg-zinc-950/40 border border-zinc-800/50 space-y-1"
@@ -478,7 +438,7 @@ export default function ProfilePage() {
       ) : (
         /* Proof of Work Featured Articles / Repos Tab */
         <div className="space-y-3">
-          {user.featuredPosts.map((post) => (
+          {user.featuredPosts?.map((post: any) => (
             <a
               key={post.id}
               href={post.url}
@@ -501,17 +461,17 @@ export default function ProfilePage() {
               </div>
 
               <div className="flex items-center gap-3 shrink-0 ml-2">
-                {post.stars && (
+                {post.stars !== undefined && post.stars !== null && (
                   <span className="text-xs font-mono text-amber-400">
                     ★ {post.stars}
                   </span>
                 )}
-                {post.claps && (
+                {post.claps !== undefined && post.claps !== null && (
                   <span className="text-xs font-mono text-emerald-400">
                     👏 {post.claps}
                   </span>
                 )}
-                {post.likes && (
+                {post.likes !== undefined && post.likes !== null && (
                   <span className="text-xs font-mono text-pink-400">
                     ♥ {post.likes}
                   </span>
