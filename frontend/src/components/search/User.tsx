@@ -20,7 +20,10 @@ export type UserResultProps = {
   subjects?: string[];
   mode?: "online" | "in-person" | "hybrid";
   isSearching?: boolean;
-  onConnect?: (userId: string | number | null) => void;
+  actionLabel?: string;
+  actionDisabled?: boolean;
+  actionLoading?: boolean;
+  onAction?: (userId: string | number | null) => void;
 };
 
 export default function UserResult({
@@ -38,7 +41,10 @@ export default function UserResult({
   subjects = [],
   mode = "online",
   isSearching = true,
-  onConnect,
+  actionLabel = "Connect",
+  actionDisabled = false,
+  actionLoading = false,
+  onAction,
 }: UserResultProps) {
   const [imgError, setImgError] = useState(false);
   const initial = name ? name.charAt(0).toUpperCase() : "?";
@@ -160,12 +166,15 @@ export default function UserResult({
           <span className="truncate">{location || "Remote"}</span>
         </div>
 
-        <button
-          onClick={() => onConnect?.(userId)}
-          className="px-3 py-1.5 rounded-lg bg-white hover:bg-emerald-400 text-zinc-950 font-semibold text-xs transition-colors shadow-sm active:scale-95"
-        >
-          Connect
-        </button>
+        {onAction && (
+          <button
+            onClick={() => onAction(userId)}
+            disabled={actionDisabled || actionLoading}
+            className="px-3 py-1.5 rounded-lg bg-white hover:bg-emerald-400 disabled:opacity-40 disabled:hover:bg-white text-zinc-950 font-semibold text-xs transition-colors shadow-sm active:scale-95"
+          >
+            {actionLoading ? "..." : actionLabel}
+          </button>
+        )}
       </div>
     </div>
   );

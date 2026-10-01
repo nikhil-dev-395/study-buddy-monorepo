@@ -6,6 +6,9 @@ export const envVariables = z.object({
   VITE_NODE_ENV: z.string(),
   VITE_GOOGLE_CLIENT_ID: z.string(),
   VITE_GOOGLE_CLIENT_SECRET: z.string(),
+  // Optional: once set, chat upgrades from polling to live Supabase Realtime.
+  VITE_SUPABASE_URL: z.string().url().optional().or(z.literal("")),
+  VITE_SUPABASE_ANON_KEY: z.string().optional().or(z.literal("")),
 });
 
 export type TEnvVariables = z.infer<typeof envVariables>;

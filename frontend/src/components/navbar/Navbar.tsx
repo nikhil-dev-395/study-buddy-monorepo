@@ -1,12 +1,14 @@
 import { Link } from "react-router-dom";
 import { CiHome, CiLogin, CiSearch, CiLogout } from "react-icons/ci";
-import type { GoogleUser } from "../../context/AuthProvider";
-import { MdOutlineEmojiPeople } from "react-icons/md";
+import { HiOutlineSparkles } from "react-icons/hi2";
+import { FiMessageSquare } from "react-icons/fi";
+import { MdOutlineEmojiPeople, MdOutlineCalendarToday } from "react-icons/md";
 import { CgProfile } from "react-icons/cg";
+import type { UserProfile } from "../../context/AuthProvider";
 
 type NavbarProps = {
   isLoggedIn: boolean;
-  userDetails: GoogleUser | null;
+  userDetails: UserProfile | null;
   onLogout: () => void;
 };
 
@@ -62,15 +64,39 @@ export default function Navbar({
           >
             <CgProfile size={20} />
           </Link>
+
+          <Link
+            to="/chat"
+            title="Messages"
+            className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-emerald-400 active:scale-95"
+          >
+            <FiMessageSquare size={18} />
+          </Link>
+
+          <Link
+            to="/session"
+            title="Study Sessions"
+            className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-emerald-400 active:scale-95"
+          >
+            <MdOutlineCalendarToday size={18} />
+          </Link>
+
+          <Link
+            to="/ai"
+            title="AI Suite"
+            className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-emerald-400 active:scale-95"
+          >
+            <HiOutlineSparkles size={20} />
+          </Link>
         </div>
 
         {/* Auth Button/Profile Section */}
         {isLoggedIn ? (
           <div className="flex items-center gap-3">
-            {userDetails?.picture && (
+            {userDetails?.avatar_url && (
               <img
-                src={userDetails.picture}
-                alt={userDetails.name}
+                src={userDetails.avatar_url}
+                alt={userDetails.username}
                 className="w-8 h-8 rounded-full object-cover ring-2 ring-emerald-500/20 shadow-sm"
               />
             )}

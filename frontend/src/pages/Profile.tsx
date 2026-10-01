@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { CiLocationOn, CiClock1, CiPaperplane, CiGlobe } from "react-icons/ci";
 import { MdCalendarToday, MdSubject } from "react-icons/md";
 
@@ -14,38 +13,36 @@ import {
   FaExternalLinkAlt,
   FaNetworkWired,
 } from "react-icons/fa";
+import { useAuth } from "../hooks/useAuth";
+import { useProfile } from "../hooks/useProfile";
+import EditProfileModal from "../components/profile/EditProfileModal";
+import type { RawProfile } from "../types/profile";
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const { user: authUser } = useAuth();
+  const userId = authUser?.id ?? null;
+
+  const { profile: user, loading, error, refresh, fetchRaw, save } = useProfile(userId);
   const [activeTab, setActiveTab] = useState<"about" | "proof">("about");
   const [imgError, setImgError] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [rawProfile, setRawProfile] = useState<RawProfile | null>(null);
+  const [loadingRaw, setLoadingRaw] = useState(false);
 
   useEffect(() => {
-    async function fetchMyProfile() {
-      try {
-        // Read user data from localStorage
-        const storedUser = localStorage.getItem("user");
-        const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-        const currentUserId = parsedUser?.id || 5;
+    void refresh();
+  }, [refresh]);
 
-        const response = await fetch(
-          `http://127.0.0.1:8000/profile/full/${currentUserId}`,
-        );
-        const result = await response.json();
-
-        if (result.status === "success" && result.data) {
-          setUser(result.data);
-        }
-      } catch (err) {
-        console.error("Failed to load user profile:", err);
-      } finally {
-        setLoading(false);
-      }
+  const openEdit = async () => {
+    try {
+      setLoadingRaw(true);
+      const raw = await fetchRaw();
+      setRawProfile(raw);
+      setIsEditing(true);
+    } finally {
+      setLoadingRaw(false);
     }
-
-    fetchMyProfile();
-  }, []);
+  };
 
   const getPlatformIcon = (platform: string) => {
     switch (platform.toLowerCase()) {
@@ -65,6 +62,14 @@ export default function ProfilePage() {
     }
   };
 
+  if (!userId) {
+    return (
+      <div className="w-full max-w-4xl mx-auto px-4 py-20 text-center text-zinc-400">
+        Please log in to view your profile.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="w-full max-w-4xl mx-auto px-4 py-20 text-center text-zinc-400">
@@ -73,10 +78,10 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user) {
+  if (error || !user) {
     return (
       <div className="w-full max-w-4xl mx-auto px-4 py-20 text-center text-zinc-400">
-        Profile not found.
+        {error || "Profile not found."}
       </div>
     );
   }
@@ -131,11 +136,20 @@ export default function ProfilePage() {
                 </p>
               </div>
 
-              {/* Primary Connect CTA */}
-              <button className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs transition-all active:scale-95 shadow-md">
-                <CiPaperplane size={16} />
-                Send Study Request
-              </button>
+              {/* Primary Actions */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={openEdit}
+                  disabled={loadingRaw}
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/60 text-zinc-200 font-semibold text-xs transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {loadingRaw ? "Loading..." : "Edit Profile"}
+                </button>
+                <button className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs transition-all active:scale-95 shadow-md">
+                  <CiPaperplane size={16} />
+                  Send Study Request
+                </button>
+              </div>
             </div>
 
             {/* Subtitle */}
@@ -413,7 +427,7 @@ export default function ProfilePage() {
             </h3>
 
             <div className="space-y-3">
-              {user.workExperience?.map((work: any, idx: number) => (
+              {user.workExperience?.map((work, idx: number) => (
                 <div
                   key={idx}
                   className="p-3.5 rounded-xl bg-zinc-950/40 border border-zinc-800/50 space-y-1"
@@ -438,7 +452,7 @@ export default function ProfilePage() {
       ) : (
         /* Proof of Work Featured Articles / Repos Tab */
         <div className="space-y-3">
-          {user.featuredPosts?.map((post: any) => (
+          {user.featuredPosts?.map((post) => (
             <a
               key={post.id}
               href={post.url}
@@ -484,6 +498,15 @@ export default function ProfilePage() {
             </a>
           ))}
         </div>
+      )}
+
+      {isEditing && (
+        <EditProfileModal
+          initialRaw={rawProfile}
+          fallbackName={authUser?.username || user.name}
+          onClose={() => setIsEditing(false)}
+          onSave={save}
+        />
       )}
     </div>
   );

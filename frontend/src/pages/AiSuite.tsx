@@ -5,95 +5,54 @@ import {
   FiFileText,
   FiMessageSquare,
   FiSend,
-
   FiCheckCircle,
-
   FiRefreshCw,
-
   FiCpu,
   FiZap,
   FiChevronRight,
 } from "react-icons/fi";
 import { HiOutlineSparkles } from "react-icons/hi2";
+import {
+  useAiSuite,
+  type QuizQuestion,
+  type RoadmapPhase,
+  type TutorMessage,
+} from "../hooks/useAiSuite";
 
 export default function AiSuitePage() {
   const [activeTab, setActiveTab] = useState<
     "roadmap" | "quiz" | "summarizer" | "tutor"
   >("roadmap");
 
+  const { loading, error, generateRoadmap, generateQuiz, summarizeNotes, askTutor } =
+    useAiSuite();
+
   // --- AI 1: Roadmap State ---
   const [goal, setGoal] = useState("Build full-stack app with FastAPI & React");
   const [days, setDays] = useState("30");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [isGeneratingRoadmap, setIsGeneratingRoadmap] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
-  const [roadmapResult, setRoadmapResult] = useState<any[]>([
-    {
-      phase: "Phase 1 (Days 1–10): Backend Fundamentals",
-      topics: [
-        "FastAPI REST API design",
-        "JWT authentication & Refresh tokens",
-        "Supabase PostgreSQL integration",
-      ],
-      project: "Build authenticated user CRUD API",
-    },
-    {
-      phase: "Phase 2 (Days 11–20): Frontend & Real-time State",
-      topics: [
-        "React modular component design",
-        "Tailwind Dark System",
-        "WebSocket real-time chat setup",
-      ],
-      project: "Connect React dashboard with live message feeds",
-    },
-    {
-      phase: "Phase 3 (Days 21–30): Integration & AI Copilot Tools",
-      topics: [
-        "Model Context Protocol (MCP) tool integration",
-        "Session scheduler syncing",
-        "Deployment",
-      ],
-      project: "Ship full StudyBuddy MVP",
-    },
-  ]);
+  const [roadmapResult, setRoadmapResult] = useState<RoadmapPhase[]>([]);
+
+  const handleGenerateRoadmap = async () => {
+    if (!goal.trim()) return;
+    const result = await generateRoadmap(goal.trim(), Number(days));
+    if (result) setRoadmapResult(result.phases);
+  };
 
   // --- AI 2: Quiz State ---
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [quizTopic, setQuizTopic] = useState("FastAPI & System Design");
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [quizScore, setQuizScore] = useState<number | null>(null);
   const [selectedAnswers, setSelectedAnswers] = useState<
     Record<number, number>
   >({});
-  const mockQuiz = [
-    {
-      id: 1,
-      question:
-        "Which header should contain the JWT access token in REST API requests?",
-      options: [
-        "Cookie: jwt_token",
-        "Authorization: Bearer <token>",
-        "Content-Type: application/jwt",
-        "X-Auth-Key: <token>",
-      ],
-      correct: 1,
-      explanation:
-        "Bearers in the Authorization header are standard for OAuth2/JWT workflows.",
-    },
-    {
-      id: 2,
-      question:
-        "In Model Context Protocol (MCP), what is the role of an MCP Tool?",
-      options: [
-        "To provide styling for the UI",
-        "An executable function the AI can invoke to retrieve data or take action",
-        "A database migration manager",
-        "A static text prompt",
-      ],
-      correct: 1,
-      explanation:
-        "MCP Tools allow LLMs to invoke external APIs, perform queries, or execute tasks dynamically.",
-    },
-  ];
+
+  const handleGenerateQuiz = async () => {
+    if (!quizTopic.trim()) return;
+    setQuizScore(null);
+    setSelectedAnswers({});
+    const result = await generateQuiz(quizTopic.trim(), 5);
+    if (result) setQuizQuestions(result.questions);
+  };
 
   // --- AI 3: Summarizer State ---
   const [notesInput, setNotesInput] = useState("");
@@ -102,33 +61,15 @@ export default function AiSuitePage() {
     keyPoints: string[];
     actionItems: string[];
   } | null>(null);
-  const [isSummarizing, setIsSummarizing] = useState(false);
 
-  const handleGenerateSummary = () => {
+  const handleGenerateSummary = async () => {
     if (!notesInput.trim()) return;
-    setIsSummarizing(true);
-    setTimeout(() => {
-      setSummaryResult({
-        overview:
-          "Overview of asynchronous Python API design using FastAPI and Supabase database interactions.",
-        keyPoints: [
-          "FastAPI uses Starlette and Pydantic for high-performance async validation.",
-          "JWT Access tokens should have short expiry (15-60 min) with rotated refresh tokens.",
-          "Model Context Protocol enables zero-friction AI tool connectivity without custom glue code.",
-        ],
-        actionItems: [
-          "Add rate limiting middleware to auth endpoints.",
-          "Implement WebSocket heartbeats for chat connectivity.",
-        ],
-      });
-      setIsSummarizing(false);
-    }, 800);
+    const result = await summarizeNotes(notesInput.trim());
+    if (result) setSummaryResult(result);
   };
 
   // --- AI 4: AI Tutor State ---
-  const [tutorChat, setTutorChat] = useState<
-    { sender: "user" | "ai"; text: string; actionChip?: string }[]
-  >([
+  const [tutorChat, setTutorChat] = useState<TutorMessage[]>([
     {
       sender: "ai",
       text: "Hello! I am your StudyBuddy AI Copilot. I can explain complex CS topics, debug code, or check your schedule.",
@@ -136,24 +77,19 @@ export default function AiSuitePage() {
   ]);
   const [tutorInput, setTutorInput] = useState("");
 
-  const handleSendTutor = (e: React.FormEvent) => {
+  const handleSendTutor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tutorInput.trim()) return;
 
     const userText = tutorInput;
+    const history = tutorChat;
     setTutorChat((prev) => [...prev, { sender: "user", text: userText }]);
     setTutorInput("");
 
-    setTimeout(() => {
-      setTutorChat((prev) => [
-        ...prev,
-        {
-          sender: "ai",
-          text: `Here is the breakdown for "${userText}": In a production setup, you decouple state management from UI rendering. Would you like me to trigger an MCP Tool to automatically book a peer review session with Sarah Jenkins?`,
-          actionChip: "⚡ MCP Tool: Schedule Sync with Sarah Jenkins",
-        },
-      ]);
-    }, 600);
+    const result = await askTutor(userText, history);
+    if (result) {
+      setTutorChat((prev) => [...prev, { sender: "ai", text: result.reply }]);
+    }
   };
 
   return (
@@ -271,14 +207,27 @@ export default function AiSuitePage() {
 
               <div className="md:col-span-2">
                 <button
-                  onClick={() => setIsGeneratingRoadmap(true)}
-                  className="w-full flex items-center justify-center gap-1.5 py-2.2 px-3 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs rounded-xl transition active:scale-95 shadow-sm"
+                  onClick={handleGenerateRoadmap}
+                  disabled={loading || !goal.trim()}
+                  className="w-full flex items-center justify-center gap-1.5 py-2.2 px-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-black font-semibold text-xs rounded-xl transition active:scale-95 shadow-sm"
                 >
                   <HiOutlineSparkles className="w-4 h-4" />
-                  <span>Generate</span>
+                  <span>{loading ? "Generating..." : "Generate"}</span>
                 </button>
               </div>
             </div>
+
+            {error && (
+              <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                {error}
+              </p>
+            )}
+
+            {roadmapResult.length === 0 && !loading && (
+              <p className="text-center text-xs text-zinc-500 py-6">
+                Enter a learning goal above and click Generate to get your roadmap.
+              </p>
+            )}
 
             {/* Generated Plan Output */}
             <div className="space-y-3">
@@ -330,27 +279,44 @@ export default function AiSuitePage() {
         {activeTab === "quiz" && (
           <div className="bg-zinc-900/70 backdrop-blur-md border border-zinc-800/80 rounded-2xl p-6 shadow-lg shadow-zinc-900/50 space-y-6 animate-in fade-in duration-200">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-zinc-800">
-              <div>
-                <h3 className="text-base font-semibold text-zinc-100">
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-zinc-100 mb-2">
                   Interactive Knowledge Check
                 </h3>
-                <p className="text-xs text-zinc-400">
-                  Test yourself on:{" "}
-                  <span className="text-emerald-400 font-mono">
-                    {quizTopic}
-                  </span>
-                </p>
+                <input
+                  type="text"
+                  value={quizTopic}
+                  onChange={(e) => setQuizTopic(e.target.value)}
+                  placeholder="Topic, e.g. FastAPI & System Design"
+                  className="w-full max-w-sm bg-black/60 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-zinc-100 focus:border-zinc-600 focus:outline-none"
+                />
               </div>
 
-              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs rounded-xl transition active:scale-95">
+              <button
+                onClick={handleGenerateQuiz}
+                disabled={loading || !quizTopic.trim()}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs rounded-xl transition active:scale-95 disabled:opacity-40"
+              >
                 <FiRefreshCw className="w-3.5 h-3.5" />
-                <span>Regenerate 5 Questions</span>
+                <span>{loading ? "Generating..." : "Generate 5 Questions"}</span>
               </button>
             </div>
 
+            {error && (
+              <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                {error}
+              </p>
+            )}
+
+            {quizQuestions.length === 0 && !loading && (
+              <p className="text-center text-xs text-zinc-500 py-6">
+                Enter a topic above and generate a quiz.
+              </p>
+            )}
+
             {/* Questions Stream */}
             <div className="space-y-6">
-              {mockQuiz.map((q, qIndex) => {
+              {quizQuestions.map((q, qIndex) => {
                 const selected = selectedAnswers[q.id];
                 const isSubmitted = quizScore !== null;
 
@@ -415,24 +381,26 @@ export default function AiSuitePage() {
             <div className="pt-4 border-t border-zinc-800 flex items-center justify-between">
               {quizScore !== null ? (
                 <span className="font-mono text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
-                  Score: {quizScore} / {mockQuiz.length} Correct
+                  Score: {quizScore} / {quizQuestions.length} Correct
                 </span>
               ) : (
                 <div />
               )}
 
-              <button
-                onClick={() => {
-                  let correctCount = 0;
-                  mockQuiz.forEach((q) => {
-                    if (selectedAnswers[q.id] === q.correct) correctCount++;
-                  });
-                  setQuizScore(correctCount);
-                }}
-                className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs rounded-xl transition active:scale-95 shadow-md"
-              >
-                Submit Answers
-              </button>
+              {quizQuestions.length > 0 && (
+                <button
+                  onClick={() => {
+                    let correctCount = 0;
+                    quizQuestions.forEach((q) => {
+                      if (selectedAnswers[q.id] === q.correct) correctCount++;
+                    });
+                    setQuizScore(correctCount);
+                  }}
+                  className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs rounded-xl transition active:scale-95 shadow-md"
+                >
+                  Submit Answers
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -463,16 +431,15 @@ export default function AiSuitePage() {
 
               <button
                 onClick={handleGenerateSummary}
-                disabled={isSummarizing || !notesInput.trim()}
+                disabled={loading || !notesInput.trim()}
                 className="mt-3 flex items-center justify-center gap-2 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-black font-semibold text-xs rounded-xl transition active:scale-95"
               >
                 <HiOutlineSparkles className="w-4 h-4" />
                 <span>
-                  {isSummarizing
-                    ? "Summarizing..."
-                    : "Generate Structured Summary"}
+                  {loading ? "Summarizing..." : "Generate Structured Summary"}
                 </span>
               </button>
+              {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
             </div>
 
             {/* Output Box */}
@@ -576,14 +543,6 @@ export default function AiSuitePage() {
                       }`}
                     >
                       <p className="leading-relaxed">{msg.text}</p>
-
-                      {msg.actionChip && (
-                        <div className="mt-2.5 pt-2 border-t border-zinc-800/80">
-                          <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono hover:bg-emerald-500/20 transition active:scale-95">
-                            {msg.actionChip}
-                          </button>
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
@@ -604,11 +563,15 @@ export default function AiSuitePage() {
               />
               <button
                 type="submit"
-                className="p-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold transition active:scale-95 shadow-sm"
+                disabled={loading || !tutorInput.trim()}
+                className="p-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-black font-semibold transition active:scale-95 shadow-sm"
               >
                 <FiSend className="w-4 h-4" />
               </button>
             </form>
+            {error && (
+              <p className="text-xs text-red-400 px-3 pb-2">{error}</p>
+            )}
           </div>
         )}
       </div>
