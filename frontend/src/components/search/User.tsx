@@ -74,6 +74,7 @@ export default function UserResult({
                 alt={name}
                 onError={() => setImgError(true)}
                 className="w-12 h-12 rounded-full object-cover ring-2 ring-emerald-500/20 shadow-sm"
+                onClick={() => onAction && onAction(userId)}
               />
             ) : (
               <div className="w-12 h-12 rounded-full bg-zinc-800 border border-zinc-700/60 flex items-center justify-center text-emerald-400 font-semibold text-lg shadow-inner">

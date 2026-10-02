@@ -125,57 +125,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 3. AI Utilities Section */}
-      <div className="space-y-3">
-        <h3 className="text-xs font-medium text-zinc-500">Tools</h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Link
-            to="/ai/roadmap"
-            className="p-4 rounded-xl bg-zinc-900/30 border border-zinc-800/60 hover:border-zinc-700 transition-all group space-y-1.5"
-          >
-            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
-              Generator
-            </span>
-            <h4 className="text-xs font-medium text-zinc-200 group-hover:text-zinc-100 transition-colors">
-              Study Roadmap
-            </h4>
-            <p className="text-[11px] text-zinc-500 leading-normal">
-              30-day structured study plans.
-            </p>
-          </Link>
-
-          <Link
-            to="/ai/quiz"
-            className="p-4 rounded-xl bg-zinc-900/30 border border-zinc-800/60 hover:border-zinc-700 transition-all group space-y-1.5"
-          >
-            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
-              Practice
-            </span>
-            <h4 className="text-xs font-medium text-zinc-200 group-hover:text-zinc-100 transition-colors">
-              AI Quizzer
-            </h4>
-            <p className="text-[11px] text-zinc-500 leading-normal">
-              Topic quizzes with explanations.
-            </p>
-          </Link>
-
-          <Link
-            to="/ai/summarizer"
-            className="p-4 rounded-xl bg-zinc-900/30 border border-zinc-800/60 hover:border-zinc-700 transition-all group space-y-1.5"
-          >
-            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
-              Utility
-            </span>
-            <h4 className="text-xs font-medium text-zinc-200 group-hover:text-zinc-100 transition-colors">
-              Notes Summarizer
-            </h4>
-            <p className="text-[11px] text-zinc-500 leading-normal">
-              Extract key takeaways from text.
-            </p>
-          </Link>
-        </div>
-      </div>
     </div>
   );
 }
