@@ -33,7 +33,4 @@ StudyBuddy is a minimalist, high-trust platform designed to help students and wo
 </p>
 
 
-3333
-
-
-
+ 

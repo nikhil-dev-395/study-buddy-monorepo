@@ -19,4 +19,6 @@ ENV = SimpleNamespace(
     SUPABASE_KEY = os.getenv("SUPABASE_KEY"),
     SUPABASE_URL = os.getenv("SUPABASE_URL"),
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY","UFsIDTnFmyG3n"),
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY"),
+    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite"),
 )
