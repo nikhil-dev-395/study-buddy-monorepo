@@ -17,11 +17,15 @@ import { useAuth } from "../hooks/useAuth";
 import { useProfile } from "../hooks/useProfile";
 import EditProfileModal from "../components/profile/EditProfileModal";
 import type { RawProfile } from "../types/profile";
-
+import { useParams } from "react-router-dom";
 export default function ProfilePage() {
+    const { id } = useParams<{ id: string }>();
   const { user: authUser } = useAuth();
-  const userId = authUser?.id ?? null;
+//   const userId = authUser?.id ?? null;
 
+  const parsedRouteId = id ? parseInt(id, 10) : null;
+  const userId = parsedRouteId ?? authUser?.id ?? null;
+const isOwnProfile = authUser?.id ? userId === authUser.id : false;
   const { profile: user, loading, error, refresh, fetchRaw, save } = useProfile(userId);
   const [activeTab, setActiveTab] = useState<"about" | "proof">("about");
   const [imgError, setImgError] = useState(false);
@@ -31,7 +35,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+  }, [refresh,userId]);
 
   const openEdit = async () => {
     try {
@@ -136,20 +140,25 @@ export default function ProfilePage() {
                 </p>
               </div>
 
-              {/* Primary Actions */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={openEdit}
-                  disabled={loadingRaw}
-                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/60 text-zinc-200 font-semibold text-xs transition-all active:scale-95 disabled:opacity-50"
-                >
-                  {loadingRaw ? "Loading..." : "Edit Profile"}
-                </button>
-                <button className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs transition-all active:scale-95 shadow-md">
-                  <CiPaperplane size={16} />
-                  Send Study Request
-                </button>
-              </div>
+           {/* Primary Actions */}
+<div className="flex items-center gap-2">
+  {isOwnProfile && (
+    <button
+      onClick={openEdit}
+      disabled={loadingRaw}
+      className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/60 text-zinc-200 font-semibold text-xs transition-all active:scale-95 disabled:opacity-50"
+    >
+      {loadingRaw ? "Loading..." : "Edit Profile"}
+    </button>
+  )}
+
+  {!isOwnProfile && (
+    <button className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs transition-all active:scale-95 shadow-md">
+      <CiPaperplane size={16} />
+      Send Study Request
+    </button>
+  )}
+</div>
             </div>
 
             {/* Subtitle */}
@@ -500,7 +509,7 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {isEditing && (
+      {isEditing && isOwnProfile && (
         <EditProfileModal
           initialRaw={rawProfile}
           fallbackName={authUser?.username || user.name}

@@ -41,7 +41,8 @@ export const router = createBrowserRouter([
           // Add extra protected routes here:
           { path: "/search", element: <SearchPage /> },
           { path: "/my-buddies", element: <BuddiesPage /> },
-          { path: "/profile", element: <ProfilePage /> },
+         { path: "/profile", element: <ProfilePage /> },
+          { path: "/profile/:id", element: <ProfilePage /> },
           { path: "/chat", element: <ChatPage /> },
           { path: "/session", element: <SessionsPage /> },
           { path: "/ai", element: <AiSuitePage /> },
