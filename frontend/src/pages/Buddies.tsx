@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { FiCheck, FiClock, FiMessageCircle, FiX } from "react-icons/fi";
 import UserResult from "../components/search/User";
 import { useAuth } from "../hooks/useAuth";
@@ -32,7 +32,11 @@ export default function BuddiesPage() {
   const userId = user?.id ?? null;
   const navigate = useNavigate();
 
-  const [tab, setTab] = useState<Tab>("connected");
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") as Tab | null;
+  const [tab, setTab] = useState<Tab>(
+    initialTab && ["connected", "sent", "incoming"].includes(initialTab) ? initialTab : "connected",
+  );
   const { connected, sent, incoming, loading, error, refresh } = useBuddies(userId);
   const { acceptRequest, rejectRequest, cancelRequest, busyId } =
     useConnectionActions(userId);

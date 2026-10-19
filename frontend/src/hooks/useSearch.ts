@@ -39,11 +39,24 @@ export function useSearch(currentUserId: number | null) {
   );
 
   // Optimistically reflect a just-sent request without re-querying the backend.
-  const markPending = useCallback((peerId: number, connectionRequestId: number) => {
-    setResults((prev) =>
-      prev.map((r) => (r.id === peerId ? { ...r, connectionRequestId } : r)),
-    );
-  }, []);
+  /** Optimistically update one result after a connect/cancel/accept/decline. */
+  const setConnection = useCallback(
+    (peerId: number, connectionStatus: NonNullable<BuddyCard["connectionStatus"]>, connectionRequestId = 0) => {
+      setResults((prev) =>
+        prev.map((r) =>
+          r.id === peerId
+            ? {
+                ...r,
+                connectionStatus,
+                connectionRequestId,
+                isRequestAccepted: connectionStatus === "connected",
+              }
+            : r,
+        ),
+      );
+    },
+    [],
+  );
 
-  return { query, results, loading, error, search, markPending };
+  return { query, results, loading, error, search, setConnection };
 }

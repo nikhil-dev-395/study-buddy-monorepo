@@ -1,5 +1,5 @@
 # app/schemas/buddy_schema.py
-from typing import List, Optional
+from typing import Literal, List, Optional
 from pydantic import BaseModel, ConfigDict
 
 
@@ -30,3 +30,6 @@ class BuddyCardResponse(BaseModel):
     status: UserStatus
     isRequestAccepted: bool
     connectionRequestId: int
+    # Relationship from the viewer's side: "sent" = viewer asked them,
+    # "received" = they asked the viewer. Only set by search.
+    connectionStatus: Literal["none", "sent", "received", "connected"] = "none"

@@ -1,5 +1,8 @@
 # Buddy Matching & Search
 
+> **Up to date reference:** see [connections-and-search.md](./connections-and-search.md) for the current request lifecycle, `connectionStatus` in search, and Buddies tabs. This file is the original design note.
+
+
 Wires `Search.tsx` and `Buddies.tsx` to the existing backend routes (`/search/peers`,
 `/connections/*`). No new backend endpoints were needed — this was a frontend wiring task.
 

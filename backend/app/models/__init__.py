@@ -2,7 +2,7 @@
 from app.models.connection_model import ConnectionRequest
 from app.models.user_model import User, UserProfile
 from app.models.message_model import Message
-from app.models.study_session_model import StudySession
+from app.models.study_session_model import StudySession, StudySessionParticipant
 from sqlmodel import SQLModel
 
 target_metadata = SQLModel.metadata

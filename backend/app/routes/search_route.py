@@ -32,13 +32,19 @@ def search_peers(
     formatted_users = []
     for user, profile in results:
         # Check connection status if current_user_id is supplied
+        # Cancelled/rejected requests count as "none" so the user can connect again.
         is_accepted = False
         conn_req_id = 0
+        conn_status = "none"
         if current_user_id:
             conn = conn_repo.get_existing_interaction(current_user_id, user.id) # type:ignore
-            if conn:
-                is_accepted = (conn.status == ConnectionStatus.ACCEPTED)
+            if conn and conn.status == ConnectionStatus.ACCEPTED:
+                is_accepted = True
                 conn_req_id = conn.id
+                conn_status = "connected"
+            elif conn and conn.status == ConnectionStatus.PENDING:
+                conn_req_id = conn.id
+                conn_status = "sent" if conn.sender_id == current_user_id else "received"
 
         headline = (profile.headline if profile else "") or ""
         parts = [p.strip() for p in headline.split("•")]
@@ -71,6 +77,7 @@ def search_peers(
                 status=UserStatus(isSearching=True),
                 isRequestAccepted=is_accepted,
                 connectionRequestId=conn_req_id, # type:ignore
+                connectionStatus=conn_status,
             )
         )
 

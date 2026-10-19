@@ -7,10 +7,18 @@ const BASE_URL = env.VITE_API_BASE_URL;
 /** Derived on the backend from starts_at/ends_at, so past sessions never show as upcoming. */
 export type SessionStatus = "upcoming" | "live" | "completed" | "cancelled";
 
+export interface SessionParticipant {
+  id: number;
+  name: string;
+  avatar_url: string | null;
+  is_host: boolean;
+}
+
 export interface StudySession {
   id: number;
   host_id: number;
-  buddy_id: number;
+  /** True when the viewer created the session (only the host can reschedule/cancel). */
+  is_host: boolean;
   title: string;
   skill_tag: string | null;
   notes: string | null;
@@ -19,13 +27,22 @@ export interface StudySession {
   status: SessionStatus;
   room_id: string;
   created_at: string;
-  partner_id: number;
-  partner_name: string;
-  partner_avatar: string | null;
+  /** Everyone in the session except the viewer (host included). */
+  participants: SessionParticipant[];
+}
+
+/** Max people per session incl. host — mirrors MAX_PARTICIPANTS on the backend. */
+export const MAX_PARTICIPANTS = 8;
+
+/** "Asha", "Asha & Ravi", "Asha, Ravi +2". */
+export function participantLabel(s: StudySession) {
+  const names = s.participants.map((p) => p.name.split(" ")[0]);
+  if (names.length <= 2) return names.join(" & ") || "Just you";
+  return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
 }
 
 export interface CreateSessionInput {
-  buddy_id: number;
+  participant_ids: number[];
   title: string;
   skill_tag?: string;
   notes?: string;
@@ -118,7 +135,43 @@ export function useSessions(userId: number | null) {
     [userId],
   );
 
-  return { sessions, loading, error, refresh, createSession, rescheduleSession, cancelSession };
+  const addParticipants = useCallback(
+    async (id: number, user_ids: number[]) => {
+      const s = await request<StudySession>(
+        `${BASE_URL}/sessions/${id}/participants?user_id=${userId}`,
+        { method: "POST", body: JSON.stringify({ user_ids }) },
+      );
+      upsert(s);
+      return s;
+    },
+    [userId],
+  );
+
+  /** Host removes someone, or pass your own id to leave. */
+  const removeParticipant = useCallback(
+    async (id: number, participantId: number) => {
+      const s = await request<StudySession | null>(
+        `${BASE_URL}/sessions/${id}/participants/${participantId}/remove?user_id=${userId}`,
+        { method: "POST" },
+      );
+      if (s) upsert(s);
+      else setSessions((prev) => prev.filter((p) => p.id !== id));
+      return s;
+    },
+    [userId],
+  );
+
+  return {
+    sessions,
+    loading,
+    error,
+    refresh,
+    createSession,
+    rescheduleSession,
+    cancelSession,
+    addParticipants,
+    removeParticipant,
+  };
 }
 
 export function fetchSession(id: number, userId: number) {

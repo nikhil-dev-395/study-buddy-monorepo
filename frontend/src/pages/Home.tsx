@@ -17,7 +17,8 @@ import { useAuth } from "../hooks/useAuth";
 import { useProfile } from "../hooks/useProfile";
 import { useMessages, type ConversationPreview } from "../hooks/useMessages";
 import { useBuddies, useConnectionActions } from "../hooks/useConnections";
-import { liveStatus, useNow, useSessions } from "../hooks/useSessions";
+import { liveStatus, participantLabel, useNow, useSessions } from "../hooks/useSessions";
+import { AvatarStack } from "../components/sessions/Participants";
 import {
   formatClock,
   formatDayLabel,
@@ -265,11 +266,11 @@ export default function HomePage() {
           {nextSession ? (
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
-                <Avatar name={nextSession.partner_name} src={nextSession.partner_avatar} size="w-11 h-11" />
+                <AvatarStack people={nextSession.participants} max={3} />
                 <div className="min-w-0">
                   <h4 className="text-sm font-medium text-zinc-100 truncate">{nextSession.title}</h4>
                   <p className="text-xs text-zinc-500 truncate mt-0.5">
-                    with {nextSession.partner_name} · {formatDayLabel(nextSession.starts_at)},{" "}
+                    with {participantLabel(nextSession)} · {formatDayLabel(nextSession.starts_at)},{" "}
                     {formatTimeRange(nextSession.starts_at, nextSession.ends_at)}
                   </p>
                 </div>

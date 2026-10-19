@@ -9,17 +9,22 @@ import {
   FiSearch,
   FiEdit2,
   FiAlertCircle,
+  FiUserPlus,
+  FiLogOut,
 } from "react-icons/fi";
 import { HiOutlineSparkles, HiOutlineCheckBadge } from "react-icons/hi2";
 import { useAuth } from "../hooks/useAuth";
 import { useBuddies } from "../hooks/useConnections";
 import {
+  MAX_PARTICIPANTS,
   liveStatus,
+  participantLabel,
   useNow,
   useSessions,
   type SessionStatus,
   type StudySession,
 } from "../hooks/useSessions";
+import { AvatarStack, BuddyPicker } from "../components/sessions/Participants";
 import {
   formatDayLabel,
   formatRelative,
@@ -41,25 +46,6 @@ const STATUS_STYLES: Record<SessionStatus, string> = {
 const inputClass =
   "w-full bg-black/60 border border-zinc-800 rounded-xl px-3.5 py-2 text-zinc-100 text-xs focus:border-zinc-600 focus:outline-none [color-scheme:dark]";
 
-function Avatar({ name, src }: { name: string; src: string | null }) {
-  const [broken, setBroken] = useState(false);
-  if (src && !broken) {
-    return (
-      <img
-        src={src}
-        alt={name}
-        onError={() => setBroken(true)}
-        className="w-6 h-6 rounded-full object-cover border border-zinc-700"
-      />
-    );
-  }
-  return (
-    <div className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-semibold text-zinc-200">
-      {name.slice(0, 2).toUpperCase()}
-    </div>
-  );
-}
-
 function durationHours(s: StudySession) {
   return (new Date(s.ends_at).getTime() - new Date(s.starts_at).getTime()) / 3_600_000;
 }
@@ -69,8 +55,17 @@ export default function SessionsPage() {
   const userId = user?.id ?? null;
   const now = useNow();
 
-  const { sessions, loading, error, refresh, createSession, rescheduleSession, cancelSession } =
-    useSessions(userId);
+  const {
+    sessions,
+    loading,
+    error,
+    refresh,
+    createSession,
+    rescheduleSession,
+    cancelSession,
+    addParticipants,
+    removeParticipant,
+  } = useSessions(userId);
   const { connected, refresh: refreshBuddies } = useBuddies(userId);
 
   useEffect(() => {
@@ -86,10 +81,12 @@ export default function SessionsPage() {
   // Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<StudySession | null>(null);
+  const [addPeopleSession, setAddPeopleSession] = useState<StudySession | null>(null);
+  const [addPeopleIds, setAddPeopleIds] = useState<number[]>([]);
 
   // Form States
   const [newTitle, setNewTitle] = useState("");
-  const [newBuddyId, setNewBuddyId] = useState("");
+  const [newBuddyIds, setNewBuddyIds] = useState<number[]>([]);
   const [newSkill, setNewSkill] = useState("");
   const [newNotes, setNewNotes] = useState("");
   const [newDate, setNewDate] = useState("");
@@ -109,7 +106,7 @@ export default function SessionsPage() {
   const openCreateModal = () => {
     setFormError(null);
     setNewTitle("");
-    setNewBuddyId(connected[0] ? String(connected[0].id) : "");
+    setNewBuddyIds([]);
     setNewSkill("");
     setNewNotes("");
     setNewDate(toDateInput(new Date().toISOString()));
@@ -120,12 +117,16 @@ export default function SessionsPage() {
 
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle || !newBuddyId || !newDate || !newStart || !newEnd) return;
+    if (!newTitle || !newDate || !newStart || !newEnd) return;
+    if (newBuddyIds.length === 0) {
+      setFormError("Pick at least one buddy to invite.");
+      return;
+    }
     try {
       setBusy(true);
       setFormError(null);
       await createSession({
-        buddy_id: Number(newBuddyId),
+        participant_ids: newBuddyIds,
         title: newTitle,
         skill_tag: newSkill || undefined,
         notes: newNotes || undefined,
@@ -146,6 +147,36 @@ export default function SessionsPage() {
       await cancelSession(id);
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "Could not cancel session.");
+    }
+  };
+
+  const handleLeave = async (session: StudySession) => {
+    if (!userId || !window.confirm("Leave this session? You can be re-added later.")) return;
+    try {
+      await removeParticipant(session.id, userId);
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Could not leave session.");
+    }
+  };
+
+  const openAddPeople = (session: StudySession) => {
+    setFormError(null);
+    setAddPeopleIds([]);
+    setAddPeopleSession(session);
+  };
+
+  const handleAddPeople = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addPeopleSession || addPeopleIds.length === 0) return;
+    try {
+      setBusy(true);
+      setFormError(null);
+      await addParticipants(addPeopleSession.id, addPeopleIds);
+      setAddPeopleSession(null);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Could not add people.");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -183,7 +214,7 @@ export default function SessionsPage() {
       const q = searchQuery.toLowerCase();
       const matchesSearch =
         s.title.toLowerCase().includes(q) ||
-        s.partner_name.toLowerCase().includes(q) ||
+        s.participants.some((p) => p.name.toLowerCase().includes(q)) ||
         (s.skill_tag ?? "").toLowerCase().includes(q);
       return matchesFilter && matchesSearch;
     })
@@ -211,7 +242,7 @@ export default function SessionsPage() {
               1-on-1 Study Sessions
             </h1>
             <p className="text-sm text-zinc-400 mt-1">
-              Schedule a slot with a buddy and join the video room right here.
+              Schedule 1:1 or group study slots with your buddies and join the video room right here.
             </p>
           </div>
 
@@ -359,11 +390,19 @@ export default function SessionsPage() {
 
                     {/* Buddy & Skill Meta */}
                     <div className="flex items-center gap-3 mt-2.5">
-                      <div className="flex items-center gap-2">
-                        <Avatar name={session.partner_name} src={session.partner_avatar} />
-                        <span className="text-xs text-zinc-300 font-medium">
-                          {session.partner_name}
+                      <div className="flex items-center gap-2 min-w-0">
+                        <AvatarStack people={session.participants} />
+                        <span className="text-xs text-zinc-300 font-medium truncate">
+                          {participantLabel(session)}
                         </span>
+                        {session.participants.length > 1 && (
+                          <span className="text-[10px] text-zinc-500 shrink-0">
+                            · group of {session.participants.length + 1}
+                          </span>
+                        )}
+                        {!session.is_host && (
+                          <span className="text-[10px] text-zinc-500 shrink-0">· invited</span>
+                        )}
                       </div>
 
                       {session.skill_tag && (
@@ -395,7 +434,25 @@ export default function SessionsPage() {
 
                     {isActive && (
                       <div className="flex items-center gap-2 self-end sm:self-auto">
-                        {!isLive && (
+                        {session.participants.length + 1 < MAX_PARTICIPANTS && (
+                          <button
+                            onClick={() => openAddPeople(session)}
+                            className="px-2.5 py-1.5 rounded-xl text-zinc-400 hover:text-emerald-300 hover:bg-emerald-500/10 text-xs transition border border-transparent hover:border-emerald-500/20 active:scale-95"
+                            title="Add people"
+                          >
+                            <FiUserPlus className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {!session.is_host && (
+                          <button
+                            onClick={() => handleLeave(session)}
+                            className="px-2.5 py-1.5 rounded-xl text-zinc-400 hover:text-red-400 hover:bg-red-500/10 text-xs transition border border-transparent hover:border-red-500/20 active:scale-95"
+                            title="Leave session"
+                          >
+                            <FiLogOut className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {!isLive && session.is_host && (
                           <>
                             <button
                               onClick={() => openRescheduleModal(session)}
@@ -482,36 +539,30 @@ export default function SessionsPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-medium text-zinc-400 block mb-1">
-                      Study Partner
-                    </label>
-                    <select
-                      required
-                      value={newBuddyId}
-                      onChange={(e) => setNewBuddyId(e.target.value)}
-                      className={inputClass}
-                    >
-                      {connected.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-zinc-400 block mb-1">
-                      Skill Tag
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Data Structures"
-                      value={newSkill}
-                      onChange={(e) => setNewSkill(e.target.value)}
-                      className={inputClass}
-                    />
-                  </div>
+                <div>
+                  <label className="text-xs font-medium text-zinc-400 flex items-center justify-between mb-1.5">
+                    <span>Invite buddies</span>
+                    <span className="text-[10px] text-zinc-500">
+                      {newBuddyIds.length} selected · pick several for a group session
+                    </span>
+                  </label>
+                  <BuddyPicker
+                    buddies={connected}
+                    selected={newBuddyIds}
+                    onChange={setNewBuddyIds}
+                    max={MAX_PARTICIPANTS - 1}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-zinc-400 block mb-1">Skill Tag</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Data Structures"
+                    value={newSkill}
+                    onChange={(e) => setNewSkill(e.target.value)}
+                    className={inputClass}
+                  />
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
@@ -591,7 +642,77 @@ export default function SessionsPage() {
       )}
 
       {/* ========================================================= */}
-      {/* 5. MODAL: RESCHEDULE SESSION                              */}
+      {/* 5. MODAL: ADD PEOPLE                                      */}
+      {/* ========================================================= */}
+      {addPeopleSession && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-700/50 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
+              <div>
+                <h3 className="text-zinc-100 font-semibold text-sm flex items-center gap-2">
+                  <FiUserPlus className="w-4 h-4 text-emerald-400" /> Add people
+                </h3>
+                <p className="text-[10px] font-mono text-zinc-400 mt-0.5">{addPeopleSession.title}</p>
+              </div>
+              <button
+                onClick={() => setAddPeopleSession(null)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition"
+              >
+                <FiX className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddPeople} className="space-y-4 mt-4">
+              <div className="flex items-center gap-2 text-xs text-zinc-400">
+                <AvatarStack people={addPeopleSession.participants} max={6} />
+                <span>already in · {addPeopleSession.participants.length + 1} people</span>
+              </div>
+              {connected.length === 0 ? (
+                <p className="text-xs text-zinc-500">
+                  You can only add your own buddies.{" "}
+                  <Link to="/search" className="text-emerald-400 hover:underline">
+                    Find buddies
+                  </Link>
+                </p>
+              ) : (
+                <BuddyPicker
+                  buddies={connected}
+                  selected={addPeopleIds}
+                  onChange={setAddPeopleIds}
+                  disabledIds={[
+                    addPeopleSession.host_id,
+                    ...addPeopleSession.participants.map((p) => p.id),
+                  ]}
+                  max={MAX_PARTICIPANTS - 1 - addPeopleSession.participants.length}
+                />
+              )}
+              <p className="text-[11px] text-zinc-500">
+                They'll see this session on their Sessions page and can join the same video room.
+              </p>
+              {formError && <p className="text-xs text-red-400">{formError}</p>}
+              <div className="pt-3 flex justify-end gap-2 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setAddPeopleSession(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={busy || addPeopleIds.length === 0}
+                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-black font-semibold text-xs rounded-xl transition active:scale-95"
+                >
+                  {busy ? "Adding..." : `Add ${addPeopleIds.length || ""}`.trim()}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 6. MODAL: RESCHEDULE SESSION                              */}
       {/* ========================================================= */}
       {selectedSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">

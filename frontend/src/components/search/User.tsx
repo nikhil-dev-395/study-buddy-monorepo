@@ -26,6 +26,9 @@ export type UserResultProps = {
   onAction?: (userId: string | number | null) => void;
   /** Replaces the study-mode pill, e.g. a "Requested" badge on the Buddies page. */
   statusBadge?: ReactNode;
+  /** Optional muted button left of the main action (e.g. Decline). */
+  secondaryActionLabel?: string;
+  onSecondaryAction?: (userId: string | number | null) => void;
 };
 
 export default function UserResult({
@@ -48,6 +51,8 @@ export default function UserResult({
   actionLoading = false,
   onAction,
   statusBadge,
+  secondaryActionLabel,
+  onSecondaryAction,
 }: UserResultProps) {
   const [imgError, setImgError] = useState(false);
   const initial = name ? name.charAt(0).toUpperCase() : "?";
@@ -170,6 +175,16 @@ export default function UserResult({
           <span className="truncate">{location || "Remote"}</span>
         </div>
 
+        <div className="flex items-center gap-2 shrink-0">
+        {onSecondaryAction && secondaryActionLabel && (
+          <button
+            onClick={() => onSecondaryAction(userId)}
+            disabled={actionLoading}
+            className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-zinc-300 font-semibold text-xs transition-colors active:scale-95"
+          >
+            {secondaryActionLabel}
+          </button>
+        )}
         {onAction && (
           <button
             onClick={() => onAction(userId)}
@@ -179,6 +194,7 @@ export default function UserResult({
             {actionLoading ? "..." : actionLabel}
           </button>
         )}
+        </div>
       </div>
     </div>
   );

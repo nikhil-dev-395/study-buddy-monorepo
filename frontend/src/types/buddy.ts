@@ -19,6 +19,8 @@ export interface BuddyCard {
   status: { isSearching: boolean };
   isRequestAccepted: boolean;
   connectionRequestId: number;
+  /** Viewer's side of the relationship; only returned by search. */
+  connectionStatus?: "none" | "sent" | "received" | "connected";
 }
 
 export interface ConnectionRequestRecord {

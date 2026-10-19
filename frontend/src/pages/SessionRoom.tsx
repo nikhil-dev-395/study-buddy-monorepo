@@ -2,7 +2,14 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { FiArrowLeft, FiClock, FiExternalLink, FiMessageSquare } from "react-icons/fi";
 import { useAuth } from "../hooks/useAuth";
-import { fetchSession, liveStatus, useNow, type StudySession } from "../hooks/useSessions";
+import {
+  fetchSession,
+  liveStatus,
+  participantLabel,
+  useNow,
+  type StudySession,
+} from "../hooks/useSessions";
+import { AvatarStack } from "../components/sessions/Participants";
 import { env } from "../utils/env";
 import { formatDayLabel, formatRelative, formatTimeRange } from "../utils/time";
 
@@ -66,17 +73,12 @@ export default function SessionRoomPage() {
             <p className="text-xs text-zinc-500 flex items-center gap-1.5">
               <FiClock className="w-3 h-3" />
               {formatDayLabel(session.starts_at)} ·{" "}
-              {formatTimeRange(session.starts_at, session.ends_at)} · with {session.partner_name}
+              {formatTimeRange(session.starts_at, session.ends_at)} · with {participantLabel(session)}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            to={`/chat?peer=${session.partner_id}`}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 hover:text-zinc-100"
-          >
-            <FiMessageSquare className="w-3.5 h-3.5" /> Chat
-          </Link>
+          <AvatarStack people={session.participants} max={5} />
           <a
             href={url}
             target="_blank"
@@ -111,7 +113,7 @@ export default function SessionRoomPage() {
           <h2 className="text-xl font-semibold text-zinc-100">Ready to study?</h2>
           <p className="text-xs text-zinc-400 max-w-sm mx-auto">
             Your camera and mic will be requested. You can join early and wait for{" "}
-            {session.partner_name}.
+            {participantLabel(session)}. Everyone in the session uses this same room.
           </p>
           {session.notes && (
             <p className="text-xs text-zinc-300 bg-black/40 border border-zinc-800 rounded-xl p-3 max-w-md mx-auto">
@@ -127,6 +129,32 @@ export default function SessionRoomPage() {
           </button>
         </div>
       )}
+
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+        <p className="text-xs font-semibold text-zinc-300 mb-3">
+          In this session · {session.participants.length + 1} people
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300">
+            You{session.is_host && " · host"}
+          </span>
+          {session.participants.map((p) => (
+            <Link
+              key={p.id}
+              to={`/chat?peer=${p.id}`}
+              title={`Message ${p.name}`}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 border border-zinc-800 hover:border-zinc-600 text-xs text-zinc-300"
+            >
+              {p.name}
+              {p.is_host && <span className="text-[10px] text-zinc-500">host</span>}
+              <FiMessageSquare className="w-3 h-3 text-zinc-500" />
+            </Link>
+          ))}
+        </div>
+        <p className="text-[11px] text-zinc-500 mt-3">
+          Use the chat inside the video call to talk with everyone at once, or tap a name to message them directly.
+        </p>
+      </div>
     </div>
   );
 }
