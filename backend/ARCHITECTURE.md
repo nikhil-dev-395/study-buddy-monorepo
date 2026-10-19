@@ -1,100 +1,156 @@
-# StudyBuddy MVP Checklist
+# Backend Architecture
 
-## ✅ Core Features
+FastAPI + SQLModel + Alembic on PostgreSQL (Supabase). This is the backend-specific how-to; the
+system overview, auth flow, data model and env vars are in
+[../docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md). The old MVP checklist now lives in
+[../docs/ROADMAP.md](../docs/ROADMAP.md).
 
-- [ ] User Authentication
-  - [ ] Sign up
-  - [ ] Login
-  - [ ] JWT Authentication
+## Folders
 
-  // we will going to add accesstoken , and refreshtoken
+| Path | Contents |
+|---|---|
+| `app/main.py` | `FastAPI` app, CORS, `include_router(...)` for every router, global exception handlers, `lifespan` → `init_db()` |
+| `app/env.py` | Loads `backend/.env`; exposes settings as `ENV.<NAME>` |
+| `app/db/database.py` | `engine`, `init_db()` (`create_all` + `SELECT 1`), `get_session()` dependency |
+| `app/models/` | SQLModel tables (`table=True`) and per-domain request/response schemas; `__init__.py` imports every table |
+| `app/schemas/` | Pydantic-only schemas (Google auth body, full profile, buddy cards) |
+| `app/repository/` | One class per domain, constructed with a `Session`; all queries and commits |
+| `app/routes/` | One `APIRouter` per domain (`users`, `profile`, `connections`, `search`, `messages`, `ai`, `sessions`) |
+| `app/services/auth/` | Google ID-token verification, JWT creation (`token.py`), `get_current_user` dependency |
+| `app/services/ai/` | Gemini client (`generate_json`) |
+| `app/utils/api/` | `ApiResponse` (success/error envelope) and `ApiError` (raiseable) |
+| `app/utils/logger.py` | `logger` (stdlib logging, name `study-buddy`) |
+| `app/scripts/seed_users.py` | Idempotent seed data |
+| `migrations/` | Alembic `env.py`, `versions/` |
 
-- [ ] User Profiles
-  - [ ] View profile
-  - [ ] Edit profile
-  - [ ] Add bio
-  - [ ] Add skills
+Flow: **route → repository → model → DB**, with every response wrapped by `ApiResponse`.
 
-- [ ] Skill Listings
-  - [ ] Teach a skill
-  - [ ] Learn a skill
-  - [ ] Browse available skills
+## Running
 
-- [ ] Buddy Matching
-  - [ ] Find users by skill
-  - [ ] Send buddy request
-  - [ ] Accept/Reject request
+Requires Python ≥ 3.14 and Poetry. Create `backend/.env` with at least `POSTGRES_URL`,
+`JWT_SECRET_KEY`, `GOOGLE_CLIENT_ID` and (for AI) `GEMINI_API_KEY` — see
+[env vars](../docs/ARCHITECTURE.md#11-environment-variables). `.env.example` is out of date.
 
-- [ ] Chat
-  - [ ] One-to-one messaging
-  - [ ] Real-time updates
-
-- [ ] Session Scheduling
-  - [ ] Create session
-  - [ ] View upcoming sessions
-  - [ ] Cancel/Reschedule session
-
----
-
-## 🤖 AI Features
-
-- [ ] AI Study Roadmap
-  - [ ] Enter learning goal
-  - [ ] Select duration (e.g., 30 days)
-  - [ ] Generate personalized roadmap
-
-- [ ] AI Quiz Generator
-  - [ ] Enter topic
-  - [ ] Generate 5–10 questions
-  - [ ] Show answers/explanations
-
-- [ ] AI Notes Summarizer
-  - [ ] Paste notes or upload text
-  - [ ] Generate concise summary
-  - [ ] Highlight key points
-
-- [ ] AI Chat Tutor
-  - [ ] Ask subject-related questions
-  - [ ] AI responds with explanations
-  - [ ] Maintain chat history
-
----
-
-## 🛠 Tech Stack
-
-- [ ] Frontend: React
-- [ ] Backend: FastAPI
-- [ ] Database: Supabase
-- [ ] AI: OpenAI API or an open-source model via an API
-
----
-
-## 🚀 Optional (If Time Allows)
-
-- [ ] Notifications
-- [ ] Dark mode
-- [ ] Profile avatars
-- [ ] Responsive UI
-- [ ] Deployment
-
-
-
-### google auth architecture
+```bash
+cd backend
+poetry install                 # includes dev group: poethepoet, pylint
+poetry run poe dev             # uvicorn app.main:app --reload --port 8000
+# or: bash startup.sh          # same thing (the script's shebang is malformed, so call it via bash)
 ```
-Frontend (React)
-      |
-      | 1. User clicks "Sign in with Google"
-      ↓
-Google OAuth
-      |
-      | 2. Returns Google ID token
-      ↓
-Frontend sends token to FastAPI
-      |
-      | 3. Verify token
-      ↓
-FastAPI creates/finds user
-      |
-      | 4. Returns your own JWT access token
 
+- API: <http://localhost:8000>, interactive docs: <http://localhost:8000/docs>.
+- On startup `init_db()` runs `SQLModel.metadata.create_all(engine)`; connection errors are logged,
+  not fatal — check the log for "Successfully connected to the PostgreSQL database!".
+- Seed data: `poetry run python -m app.scripts.seed_users`.
+- Lint: `poetry run pylint app`.
+
+## Database migrations
+
+Two mechanisms coexist:
+
+1. `create_all` at startup creates any **missing** tables from the models (it never alters or drops).
+2. Alembic applies everything else (indexes, column changes, drops, Supabase RLS/Realtime grants).
+
+Current chain: `579ef4faa08d` → `b6d74aff7b8b` → `70cd8f5e4e31` → `c3a91d7e5f20` (head).
+
+**Existing database** (e.g. the shared Supabase project):
+
+```bash
+cd backend
+poetry run alembic upgrade head
+poetry run alembic current      # verify
 ```
+
+**Fresh database:** the first revision only adds an index to `user`, assuming the table already
+exists, and later revisions create tables that `create_all` also creates. So: start the server once
+(tables get created), then `poetry run alembic stamp head`. On Supabase, also run the RLS/publication
+statements from `70cd8f5e4e31_create_messages_table.py` by hand if you want Realtime chat.
+
+## Adding a feature
+
+### 1. Model
+
+Create or extend `app/models/<domain>_model.py`:
+
+```python
+class Thing(SQLModel, table=True):
+    @declared_attr          # explicit table name, as other models do
+    def __tablename__(cls) -> str:
+        return "things"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    owner_id: int = Field(foreign_key="user.id", index=True)
+    created_at: datetime = Field(default_factory=get_utc_now)
+
+class CreateThingSchema(BaseModel): ...
+class ThingResponseSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    ...
+```
+
+Then import the table in `app/models/__init__.py` so it is part of `SQLModel.metadata`.
+
+### 2. Migration
+
+```bash
+cd backend
+poetry run alembic revision --autogenerate -m "create_things_table"
+# review migrations/versions/<rev>_create_things_table.py, then
+poetry run alembic upgrade head
+```
+
+> **Review autogenerated files carefully.** `migrations/env.py` imports only
+> `app.models.user_model`, so `SQLModel.metadata` there lacks `connection_requests`, `messages` and
+> `study_sessions`; autogenerate will propose **dropping** them. Delete those ops (or hand-write the
+> migration, as `70cd8f5e4e31` and `c3a91d7e5f20` do) until `env.py` imports `app.models`.
+
+### 3. Repository
+
+`app/repository/thing_repo.py`:
+
+```python
+class ThingRepository:
+    def __init__(self, session: Session):
+        self.session = session
+
+    def create(self, owner_id: int, data: CreateThingSchema) -> Thing:
+        thing = Thing(owner_id=owner_id, **data.model_dump())
+        self.session.add(thing); self.session.commit(); self.session.refresh(thing)
+        return thing
+```
+
+### 4. Route
+
+`app/routes/thing_route.py`:
+
+```python
+router = APIRouter(prefix="/things", tags=["Things"])
+
+@router.post("/create", status_code=status.HTTP_201_CREATED)
+def create_thing(
+    payload: CreateThingSchema,
+    current_user: dict = Depends(get_current_user),   # enforce the JWT
+    session: Session = Depends(get_session),
+):
+    if ...:
+        raise ApiError(message="…", status_code=status.HTTP_400_BAD_REQUEST)
+    thing = ThingRepository(session).create(current_user["user_id"], payload)
+    return ApiResponse.success(
+        message="Thing created.",
+        status_code=status.HTTP_201_CREATED,
+        data=ThingResponseSchema.model_validate(thing).model_dump(mode="json"),
+    )
+```
+
+Register it in `app/main.py`: `app.include_router(thing_router)`.
+
+Conventions:
+
+- Always return `ApiResponse.success(...)` and raise `ApiError(...)`; the frontend reads
+  `json.message` / `json.data`.
+- Serialize with `.model_dump(mode="json")` (datetimes → ISO strings).
+- Prefer `Depends(get_current_user)` over `user_id` query params. Existing routes still take
+  `user_id`/`sender_id` from the client and are not protected — new code shouldn't copy that.
+- Define each router once per module (`user_route.py` currently re-assigns `router`, which silently
+  drops the routes declared above the re-assignment).
+- Log with `from app.utils.logger import logger`.

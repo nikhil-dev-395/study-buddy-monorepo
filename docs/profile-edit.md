@@ -1,5 +1,8 @@
 # Dummy Users & Profile Edit
 
+> This is the original change log for the profile-edit work. The current, maintained reference for
+> auth and profile endpoints and flow is [auth-and-profile.md](auth-and-profile.md).
+
 ## 1. Dummy users
 
 Added **10 more** realistic Indian-student profiles to `backend/app/scripts/seed_users.py`

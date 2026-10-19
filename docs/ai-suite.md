@@ -1,47 +1,110 @@
 # AI Suite (Gemini-powered)
 
-Wires all four AI Suite tabs — Roadmap, Quiz, Notes Summarizer, Chat Tutor — to real
-Gemini API calls. No training, no fine-tuning, no vector DB — this is "moderate level":
-plain prompt-in, structured-JSON-out, same pattern across all four features.
+Four study tools on `/ai`: **Ask Tutor**, **Practice Quiz**, **Notes → Flashcards**, **Study Plan**.
+Each is a plain prompt → structured-JSON call to Google Gemini; no fine-tuning, embeddings or
+persistence on the server.
 
-## What changed
-
-| File | Purpose |
+| Layer | File |
 |---|---|
-| `backend/.env` | Added `GEMINI_API_KEY` and `GEMINI_MODEL` (server-side only — never shipped to the frontend). |
-| `backend/app/services/ai/gemini_service.py` | `generate_json(prompt)` — calls Gemini with `responseMimeType: application/json` so the model returns pure JSON, no markdown-fence parsing needed. Retries up to 3x on `429`/`503` (transient rate-limit/overload), respecting Google's suggested `retryDelay` when given. |
-| `backend/app/routes/ai_route.py` | `POST /ai/roadmap`, `/ai/quiz`, `/ai/summarize`, `/ai/tutor` — each builds a schema-constrained prompt and returns the parsed JSON through the usual `ApiResponse` envelope. |
-| `frontend/src/hooks/useAiSuite.ts` | `generateRoadmap`, `generateQuiz`, `summarizeNotes`, `askTutor` — shared `loading`/`error` state. |
-| `frontend/src/pages/AiSuite.tsx` | All 4 tabs rewired to the hook; removed every mock array / `setTimeout` fake. Also fixed 3 pre-existing unused-variable lint errors as a side effect (the mock state is now actually used). |
+| Gemini client | `backend/app/services/ai/gemini_service.py` — `generate_json(prompt)` |
+| Routes | `backend/app/routes/ai_route.py` (prefix `/ai`) |
+| Hook | `frontend/src/hooks/useAiSuite.ts` |
+| Page | `frontend/src/pages/AiSuite.tsx` |
+| Markdown renderer | `frontend/src/components/ai/Markdown.tsx` |
 
-## How to use it
+## Backend
 
-1. Start the backend (`poe dev` or `uvicorn app.main:app --port 8000`) and frontend (`npm run dev`).
-2. Go to `/ai`:
-   - **AI Roadmap** — enter a goal + duration, click Generate → `POST /ai/roadmap`.
-   - **Quiz Generator** — enter a topic, click Generate 5 Questions → `POST /ai/quiz`.
-   - **Notes Summarizer** — paste notes, click Generate Structured Summary → `POST /ai/summarize`.
-   - **AI Chat Tutor** — ask anything, it replies via `POST /ai/tutor` with the last 10
-     turns of conversation as context.
+### Gemini client
 
-## Important: free-tier rate limit
+`generate_json(prompt)` POSTs to
+`https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key=…` with
+`generationConfig.responseMimeType = "application/json"`, then `json.loads` the first candidate's
+text (no Markdown fence stripping needed). It makes up to **3 attempts** on `429`/`503`, waiting for
+Google's `retryDelay` (+0.5 s) when present, otherwise `2 s × attempt`. Each request has a 30 s
+timeout. Any other failure raises `RuntimeError`.
 
-The API key you gave me is on **Gemini's free tier**, capped at a very low
-requests-per-minute quota for the newest model (`gemini-3.8-flash` and its `-latest`
-alias). I hit this immediately while testing — got `429`/`503` errors back to back.
+Config (backend `.env`, server-side only): `GEMINI_API_KEY`, `GEMINI_MODEL`
+(default `gemini-3.1-flash-lite`). Changing the model needs no code change.
 
-I switched the default model to **`gemini-3.1-flash-lite`**, which responded cleanly and
-consistently in testing (confirmed live: roadmap, quiz, summary, and tutor all returned
-real, correctly-structured Gemini output). If you upgrade to a paid Gemini plan later, or
-want higher-quality output over speed, change one line in `backend/.env`:
-```
-GEMINI_MODEL="gemini-3.8-flash"   # or whatever the current flagship model is
-```
-No code changes needed — the model name is the only thing that changes.
+### Endpoints
 
-## Known limitations (not blocking)
-- No conversation persistence for the tutor — history lives in frontend state only,
-  lost on refresh. Fine for a demo; a fast-follow would save it like the chat feature.
-- No per-user rate limiting on these endpoints yet — on the free tier, multiple people
-  using AI Suite at once will hit `429`s. The retry logic smooths over brief spikes but
-  won't fix sustained overuse; that needs either a paid tier or a request queue/cache.
+All are `POST`, unauthenticated, and return the standard `ApiResponse` envelope. Any Gemini error
+(including invalid JSON) becomes **502** `"AI generation failed. Please try again."`.
+
+| Path | Body | `data` returned |
+|---|---|---|
+| `/ai/roadmap` | `{goal: str, days: int = 30}` | `{phases: [{phase, topics: [str], project}]}` — exactly 3 phases |
+| `/ai/quiz` | `{topic: str, count: int = 5, difficulty: "easy"\|"medium"\|"hard" = "medium"}` | `{questions: [{id, question, options: [4 × str], correct: <0-based index>, explanation}]}` |
+| `/ai/summarize` | `{notes: str}` (400 if blank) | `{overview, keyPoints: [str], actionItems: [str], flashcards: [{front, back}]}` — prompt asks for 4–8 flashcards |
+| `/ai/tutor` | `{message: str, history: [{sender: "user"\|"ai", text}]}` | `{reply: str}` — Markdown allowed, ~180 words, may end with a check-your-understanding question |
+
+The tutor prompt includes only the **last 10** history turns. The schema in each prompt is the
+contract — the backend doesn't validate the model's output shape, so the frontend should tolerate
+missing optional fields (it already treats `flashcards` as optional).
+
+## Frontend
+
+### `useAiSuite()`
+
+Returns `{loading, errors, generateRoadmap, generateQuiz, summarizeNotes, askTutor}`.
+
+- `loading` and `errors` are **per tool** (`Partial<Record<"roadmap"|"quiz"|"summarize"|"tutor", …>>`),
+  so a running quiz doesn't disable the tutor and errors show on the right tab.
+- Each function returns the parsed `data` or `null` on failure (the error message is put in
+  `errors[tool]`, from the envelope's `message`).
+- Signatures: `generateRoadmap(goal, days)`, `generateQuiz(topic, count = 5, difficulty = "medium")`,
+  `summarizeNotes(notes)`, `askTutor(message, history)`.
+- Requests go through `fetchWithAuth` (Bearer header attached, though the backend ignores it).
+
+### Tabs and `?tab=` deep link
+
+The active tab is stored in the URL: `/ai?tab=tutor|quiz|summarizer|roadmap` (default and fallback
+`tutor`; switching tabs uses `setSearchParams(..., {replace: true})`). Home's quick actions link to
+`/ai?tab=tutor` and `/ai?tab=quiz`.
+
+### Ask Tutor (`tutor`)
+
+- **Starters**: four example questions shown on an empty chat (`TUTOR_STARTERS`).
+- **Modes** (`TUTOR_MODES`, toggle one): *Explain simply*, *Give an example*, *Step by step*,
+  *Quiz me*. The selected mode's instruction is appended to the prompt sent to the API; the chat
+  shows only what the student typed.
+- AI replies are rendered with `components/ai/Markdown.tsx`, a small dependency-free renderer:
+  paragraphs, `#`-headings (rendered bold), `-`/`*`/`•` and numbered lists, fenced code blocks, and
+  inline `**bold**`, `*italic*`, `` `code` ``. No HTML/links, so no XSS surface.
+- Each AI reply has **Practice this with a quiz**, which switches to the quiz tab and generates a
+  quiz on the preceding question.
+- History lives in component state only (lost on refresh).
+
+### Practice Quiz (`quiz`)
+
+- Inputs: topic (plus topic-idea chips), **difficulty** easy / medium / hard, **count** 5 / 10 / 15.
+- After submitting, the score is shown and each question reveals its **explanation**.
+- **Retry N wrong** clears answers only for the missed questions and un-submits, so the student
+  re-attempts just those.
+
+### Notes → Flashcards (`summarizer`)
+
+Paste notes → overview, key points, action items, and a grid of **flashcards** that flip on click
+(front/back). Flashcards render only when the response includes them.
+
+### Study Plan (`roadmap`)
+
+- Inputs: goal and duration (15 / 30 / 60 / 90 days) → three phases with topics and a project each.
+- Topics are checkboxes with a progress count. Progress is saved in **localStorage** under
+  `roadmap-progress:<goal lowercased>` as `{"<phaseIndex>-<topicIndex>": true}` and restored when
+  the same goal is generated again. Because keys are positional, a regenerated plan with different
+  topics reuses the old ticks by index.
+
+## Running it
+
+1. Backend: set `GEMINI_API_KEY` (and optionally `GEMINI_MODEL`) in `backend/.env`, then `poe dev`.
+2. Frontend: `npm run dev`, open `/ai`.
+
+## Limitations
+
+- Free-tier Gemini keys have low requests-per-minute quotas; bursts produce 429s (retried up to
+  3 attempts, then 502). There is no per-user rate limiting or caching.
+- `/ai/*` is unauthenticated — anyone who can reach the API can spend the Gemini quota.
+- User input is interpolated directly into prompts (prompt injection is possible; output is
+  display-only, so impact is limited).
+- Tutor history and quiz results are not persisted server-side.
