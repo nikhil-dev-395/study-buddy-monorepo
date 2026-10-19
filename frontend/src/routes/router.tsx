@@ -11,6 +11,7 @@ import ProfilePage from "../pages/Profile";
 import ChatPage from "../pages/Chat";
 import SessionsPage from "../pages/Sessions";
 import AiSuitePage from "../pages/AiSuite";
+import SessionRoomPage from "../pages/SessionRoom";
 
 export const router = createBrowserRouter([
   {
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
           { path: "/profile/:id", element: <ProfilePage /> },
           { path: "/chat", element: <ChatPage /> },
           { path: "/session", element: <SessionsPage /> },
+          { path: "/session/:id/room", element: <SessionRoomPage /> },
           { path: "/ai", element: <AiSuitePage /> },
         ],
       },

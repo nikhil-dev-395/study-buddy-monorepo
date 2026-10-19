@@ -1,6 +1,7 @@
 # app/routes/connection_route.py
 from fastapi import APIRouter, Depends, status
-from sqlmodel import Session
+from sqlmodel import Session, select
+from app.models.user_model import User, UserProfile
 from app.models.connection_model import ConnectionStatus
 from app.schemas.buddy_schema import (
     AcademicDetails,
@@ -93,13 +94,30 @@ def get_incoming_requests(
     """Get all pending requests waiting for this user's approval."""
     conn_repo = ConnectionRepository(session)
     requests = conn_repo.get_pending_received_requests(user_id)
+
+    data = []
+    for r in requests:
+        record = ConnectionResponseSchema.model_validate(r).model_dump(mode="json")
+        sender = session.get(User, r.sender_id)
+        profile = session.exec(
+            select(UserProfile).where(UserProfile.user_id == r.sender_id)
+        ).first()
+        study_specs = (profile.study_specs if profile else {}) or {}
+        record.update(
+            sender_name=(profile.name if profile and profile.name else None)
+            or (sender.username if sender else f"User #{r.sender_id}"),
+            sender_avatar=sender.avatar_url if sender else None,
+            sender_headline=profile.headline if profile else None,
+            sender_subjects=(
+                study_specs.get("wants_to_learn", []) + study_specs.get("can_teach", [])
+            )[:4],
+        )
+        data.append(record)
+
     return ApiResponse.success(
         message="Pending incoming requests retrieved successfully.",
         status_code=status.HTTP_200_OK,
-        data=[
-            ConnectionResponseSchema.model_validate(r).model_dump(mode="json")
-            for r in requests
-        ],
+        data=data,
     )
 
 

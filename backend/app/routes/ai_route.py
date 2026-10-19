@@ -57,12 +57,14 @@ Respond with ONLY valid JSON matching this schema, no extra text:
 class QuizRequest(BaseModel):
     topic: str
     count: int = 5
+    difficulty: Literal["easy", "medium", "hard"] = "medium"
 
 
 @router.post("/quiz")
 def generate_quiz(payload: QuizRequest):
     prompt = f"""You are a quiz generator for students.
-Create {payload.count} multiple-choice questions about: "{payload.topic}".
+Create {payload.count} {payload.difficulty}-difficulty multiple-choice questions about: "{payload.topic}".
+Test understanding, not trivia. Make wrong options plausible (common misconceptions).
 Respond with ONLY valid JSON matching this schema, no extra text:
 {{
   "questions": [
@@ -71,7 +73,7 @@ Respond with ONLY valid JSON matching this schema, no extra text:
       "question": "string",
       "options": ["string", "string", "string", "string"],
       "correct": 0,
-      "explanation": "string - why the correct answer is right"
+      "explanation": "string - 1-2 sentences on why the correct answer is right and the key idea to remember"
     }}
   ]
 }}
@@ -104,8 +106,10 @@ Respond with ONLY valid JSON matching this schema, no extra text:
 {{
   "overview": "string - one paragraph executive summary",
   "keyPoints": ["string", "string"],
-  "actionItems": ["string", "string"]
+  "actionItems": ["string - concrete next study steps"],
+  "flashcards": [{{"front": "string - a question or term", "back": "string - short answer"}}]
 }}
+Write 4-8 flashcards covering the most exam-relevant facts in the notes.
 
 Notes:
 \"\"\"
@@ -139,8 +143,11 @@ def tutor_reply(payload: TutorRequest):
     )
 
     prompt = f"""You are StudyBuddy, a friendly and knowledgeable AI study tutor.
-Explain concepts clearly and concisely for a student. Keep replies under 120 words
-unless the question needs more detail.
+Explain concepts clearly for a student: start with the core idea in one sentence, then
+build up with a simple example or analogy. Use short paragraphs, "- " bullet lists and
+`code` where helpful (Markdown is rendered). Keep replies under 180 words unless the
+student asks for depth. If the student seems stuck, end with one short check-your-understanding
+question.
 
 Conversation so far:
 {history_text or '(start of conversation)'}

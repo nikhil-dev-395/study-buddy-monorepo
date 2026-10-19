@@ -1,188 +1,202 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   FiCalendar,
   FiClock,
   FiPlus,
   FiVideo,
-
   FiX,
-
   FiSearch,
   FiEdit2,
   FiAlertCircle,
-
 } from "react-icons/fi";
 import { HiOutlineSparkles, HiOutlineCheckBadge } from "react-icons/hi2";
+import { useAuth } from "../hooks/useAuth";
+import { useBuddies } from "../hooks/useConnections";
+import {
+  liveStatus,
+  useNow,
+  useSessions,
+  type SessionStatus,
+  type StudySession,
+} from "../hooks/useSessions";
+import {
+  formatDayLabel,
+  formatRelative,
+  formatTimeRange,
+  fromDateTimeInputs,
+  toDateInput,
+  toTimeInput,
+} from "../utils/time";
 
-// --- Types ---
-export type SessionStatus = "upcoming" | "completed" | "cancelled";
+type Filter = "all" | SessionStatus;
 
-export interface Session {
-  id: string;
-  title: string;
-  buddyName: string;
-  buddyAvatar: string;
-  skillTag: string;
-  date: string;
-  time: string;
-  status: SessionStatus;
-  meetLink?: string;
-  notes?: string;
+const STATUS_STYLES: Record<SessionStatus, string> = {
+  upcoming: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
+  live: "bg-rose-500/15 border-rose-500/30 text-rose-300 animate-pulse",
+  completed: "bg-zinc-800 border-zinc-700 text-zinc-300",
+  cancelled: "bg-red-500/10 border-red-500/20 text-red-400",
+};
+
+const inputClass =
+  "w-full bg-black/60 border border-zinc-800 rounded-xl px-3.5 py-2 text-zinc-100 text-xs focus:border-zinc-600 focus:outline-none [color-scheme:dark]";
+
+function Avatar({ name, src }: { name: string; src: string | null }) {
+  const [broken, setBroken] = useState(false);
+  if (src && !broken) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        onError={() => setBroken(true)}
+        className="w-6 h-6 rounded-full object-cover border border-zinc-700"
+      />
+    );
+  }
+  return (
+    <div className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-semibold text-zinc-200">
+      {name.slice(0, 2).toUpperCase()}
+    </div>
+  );
 }
 
-// --- Mock Data ---
-const INITIAL_SESSIONS: Session[] = [
-  {
-    id: "SES-9042",
-    title: "FastAPI & Supabase JWT Auth Flow",
-    buddyName: "Sarah Jenkins",
-    buddyAvatar: "SJ",
-    skillTag: "FastAPI & Python",
-    date: "Today, Aug 15",
-    time: "4:00 PM - 5:00 PM",
-    status: "upcoming",
-    meetLink: "https://meet.google.com/xyz-auth-sync",
-    notes: "Review refresh token rotation and RLS policies on Supabase.",
-  },
-  {
-    id: "SES-8812",
-    title: "Tailwind Dark System & Component Specs",
-    buddyName: "Alex Chen",
-    buddyAvatar: "AC",
-    skillTag: "UI/UX Design",
-    date: "Tomorrow, Aug 16",
-    time: "11:00 AM - 11:45 AM",
-    status: "upcoming",
-    meetLink: "https://meet.google.com/abc-ui-review",
-    notes: "Walk through micro-interactions and button active scaling.",
-  },
-  {
-    id: "SES-7631",
-    title: "Data Structures: Tree Traversals & DFS",
-    buddyName: "Priya Sharma",
-    buddyAvatar: "PS",
-    skillTag: "Data Structures",
-    date: "Aug 12, 2026",
-    time: "2:00 PM - 3:00 PM",
-    status: "completed",
-    notes: "Completed 4 LeetCode medium questions together.",
-  },
-  {
-    id: "SES-6510",
-    title: "System Design: Load Balancers & Redis",
-    buddyName: "Alex Chen",
-    buddyAvatar: "AC",
-    skillTag: "FastAPI & Python",
-    date: "Aug 10, 2026",
-    time: "6:00 PM - 7:00 PM",
-    status: "cancelled",
-    notes: "Rescheduled due to exam clash.",
-  },
-];
+function durationHours(s: StudySession) {
+  return (new Date(s.ends_at).getTime() - new Date(s.starts_at).getTime()) / 3_600_000;
+}
 
-// function randomText(){
-//     return Math.random()
-// }
 export default function SessionsPage() {
-  const [sessions, setSessions] = useState<Session[]>(INITIAL_SESSIONS);
-  const [filter, setFilter] = useState<
-    "all" | "upcoming" | "completed" | "cancelled"
-  >("all");
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  const now = useNow();
+
+  const { sessions, loading, error, refresh, createSession, rescheduleSession, cancelSession } =
+    useSessions(userId);
+  const { connected, refresh: refreshBuddies } = useBuddies(userId);
+
+  useEffect(() => {
+    void refresh();
+    void refreshBuddies();
+  }, [refresh, refreshBuddies]);
+
+  const [filter, setFilter] = useState<Filter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   // Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [selectedSession, setSelectedSession] = useState<StudySession | null>(null);
 
   // Form States
   const [newTitle, setNewTitle] = useState("");
-  const [newBuddy, setNewBuddy] = useState("");
+  const [newBuddyId, setNewBuddyId] = useState("");
   const [newSkill, setNewSkill] = useState("");
+  const [newNotes, setNewNotes] = useState("");
   const [newDate, setNewDate] = useState("");
-  const [newTime, setNewTime] = useState("");
-  const [newMeetLink, setNewMeetLink] = useState("");
+  const [newStart, setNewStart] = useState("");
+  const [newEnd, setNewEnd] = useState("");
   const [rescheduleDate, setRescheduleDate] = useState("");
-  const [rescheduleTime, setRescheduleTime] = useState("");
+  const [rescheduleStart, setRescheduleStart] = useState("");
+  const [rescheduleEnd, setRescheduleEnd] = useState("");
+
+  // Status is re-derived from the clock so cards flip to live/completed on their own.
+  const withStatus = useMemo(
+    () => sessions.map((s) => ({ ...s, status: liveStatus(s, now) })),
+    [sessions, now],
+  );
 
   // --- Handlers ---
-  const handleCreateSession = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle || !newDate || !newTime) return;
-
-    const newEntry: Session = {
-      id: `SES-${Math.floor(1000  * 9000)}`,
-      title: newTitle,
-      buddyName: newBuddy || "Study Partner",
-      buddyAvatar: newBuddy ? newBuddy.substring(0, 2).toUpperCase() : "SP",
-      skillTag: newSkill || "General Study",
-      date: newDate,
-      time: newTime,
-      status: "upcoming",
-      meetLink: newMeetLink || "https://meet.google.com/new-session",
-    };
-
-    setSessions([newEntry, ...sessions]);
-    setIsCreateModalOpen(false);
-    resetCreateForm();
-  };
-
-  const resetCreateForm = () => {
+  const openCreateModal = () => {
+    setFormError(null);
     setNewTitle("");
-    setNewBuddy("");
+    setNewBuddyId(connected[0] ? String(connected[0].id) : "");
     setNewSkill("");
-    setNewDate("");
-    setNewTime("");
-    setNewMeetLink("");
+    setNewNotes("");
+    setNewDate(toDateInput(new Date().toISOString()));
+    setNewStart("");
+    setNewEnd("");
+    setIsCreateModalOpen(true);
   };
 
-  const handleCancelSession = (id: string) => {
-    setSessions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: "cancelled" } : s)),
-    );
-  };
-
-  const openRescheduleModal = (session: Session) => {
-    setSelectedSession(session);
-    setRescheduleDate(session.date);
-    setRescheduleTime(session.time);
-    setIsRescheduleModalOpen(true);
-  };
-
-  const handleRescheduleSubmit = (e: React.FormEvent) => {
+  const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedSession || !rescheduleDate || !rescheduleTime) return;
-
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === selectedSession.id
-          ? {
-              ...s,
-              date: rescheduleDate,
-              time: rescheduleTime,
-              status: "upcoming",
-            }
-          : s,
-      ),
-    );
-    setIsRescheduleModalOpen(false);
-    setSelectedSession(null);
+    if (!newTitle || !newBuddyId || !newDate || !newStart || !newEnd) return;
+    try {
+      setBusy(true);
+      setFormError(null);
+      await createSession({
+        buddy_id: Number(newBuddyId),
+        title: newTitle,
+        skill_tag: newSkill || undefined,
+        notes: newNotes || undefined,
+        starts_at: fromDateTimeInputs(newDate, newStart),
+        ends_at: fromDateTimeInputs(newDate, newEnd),
+      });
+      setIsCreateModalOpen(false);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Could not schedule session.");
+    } finally {
+      setBusy(false);
+    }
   };
 
-  // Filtered Sessions
-  const filteredSessions = sessions.filter((s) => {
-    const matchesFilter = filter === "all" ? true : s.status === filter;
-    const matchesSearch =
-      s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.buddyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.skillTag.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  const handleCancelSession = async (id: number) => {
+    if (!window.confirm("Cancel this session for both of you?")) return;
+    try {
+      await cancelSession(id);
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Could not cancel session.");
+    }
+  };
 
-  const upcomingCount = sessions.filter((s) => s.status === "upcoming").length;
-  const completedCount = sessions.filter(
-    (s) => s.status === "completed",
-  ).length;
+  const openRescheduleModal = (session: StudySession) => {
+    setFormError(null);
+    setSelectedSession(session);
+    setRescheduleDate(toDateInput(session.starts_at));
+    setRescheduleStart(toTimeInput(session.starts_at));
+    setRescheduleEnd(toTimeInput(session.ends_at));
+  };
+
+  const handleRescheduleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSession || !rescheduleDate || !rescheduleStart || !rescheduleEnd) return;
+    try {
+      setBusy(true);
+      setFormError(null);
+      await rescheduleSession(
+        selectedSession.id,
+        fromDateTimeInputs(rescheduleDate, rescheduleStart),
+        fromDateTimeInputs(rescheduleDate, rescheduleEnd),
+      );
+      setSelectedSession(null);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Could not reschedule.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Filtered Sessions: live first, then upcoming soonest-first, then past newest-first.
+  const filteredSessions = withStatus
+    .filter((s) => {
+      const matchesFilter = filter === "all" ? true : s.status === filter;
+      const q = searchQuery.toLowerCase();
+      const matchesSearch =
+        s.title.toLowerCase().includes(q) ||
+        s.partner_name.toLowerCase().includes(q) ||
+        (s.skill_tag ?? "").toLowerCase().includes(q);
+      return matchesFilter && matchesSearch;
+    })
+    .sort((a, b) => {
+      const rank: Record<SessionStatus, number> = { live: 0, upcoming: 1, completed: 2, cancelled: 3 };
+      if (rank[a.status] !== rank[b.status]) return rank[a.status] - rank[b.status];
+      const diff = new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime();
+      return a.status === "upcoming" ? diff : -diff;
+    });
+
+  const upcomingCount = withStatus.filter((s) => s.status === "upcoming" || s.status === "live").length;
+  const completed = withStatus.filter((s) => s.status === "completed");
+  const hoursStudied = completed.reduce((sum, s) => sum + durationHours(s), 0);
 
   return (
     <div className="min-h-screen bg-black text-zinc-300 p-4 md:p-6 lg:p-8 flex flex-col items-center">
@@ -197,13 +211,12 @@ export default function SessionsPage() {
               1-on-1 Study Sessions
             </h1>
             <p className="text-sm text-zinc-400 mt-1">
-              Organize peer reviews, pair programming, and skill mentorship
-              slots.
+              Schedule a slot with a buddy and join the video room right here.
             </p>
           </div>
 
           <button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={openCreateModal}
             className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-semibold rounded-2xl transition active:scale-95 shadow-md shadow-emerald-950/20"
           >
             <FiPlus className="w-4 h-4" />
@@ -215,12 +228,8 @@ export default function SessionsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-zinc-900/70 backdrop-blur-md border border-zinc-800/80 rounded-2xl p-4 shadow-lg shadow-zinc-900/50 flex items-center justify-between">
             <div>
-              <p className="text-xs font-mono uppercase text-zinc-400">
-                Upcoming Slots
-              </p>
-              <h3 className="text-2xl font-bold text-zinc-100 mt-1">
-                {upcomingCount}
-              </h3>
+              <p className="text-xs font-mono uppercase text-zinc-400">Upcoming Slots</p>
+              <h3 className="text-2xl font-bold text-zinc-100 mt-1">{upcomingCount}</h3>
             </div>
             <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
               <FiClock className="w-5 h-5" />
@@ -229,12 +238,8 @@ export default function SessionsPage() {
 
           <div className="bg-zinc-900/70 backdrop-blur-md border border-zinc-800/80 rounded-2xl p-4 shadow-lg shadow-zinc-900/50 flex items-center justify-between">
             <div>
-              <p className="text-xs font-mono uppercase text-zinc-400">
-                Completed Sessions
-              </p>
-              <h3 className="text-2xl font-bold text-zinc-100 mt-1">
-                {completedCount}
-              </h3>
+              <p className="text-xs font-mono uppercase text-zinc-400">Completed Sessions</p>
+              <h3 className="text-2xl font-bold text-zinc-100 mt-1">{completed.length}</h3>
             </div>
             <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700/50 flex items-center justify-center text-zinc-300">
               <HiOutlineCheckBadge className="w-5 h-5" />
@@ -243,11 +248,9 @@ export default function SessionsPage() {
 
           <div className="bg-zinc-900/70 backdrop-blur-md border border-zinc-800/80 rounded-2xl p-4 shadow-lg shadow-zinc-900/50 flex items-center justify-between">
             <div>
-              <p className="text-xs font-mono uppercase text-zinc-400">
-                Total Hours Studied
-              </p>
+              <p className="text-xs font-mono uppercase text-zinc-400">Total Hours Studied</p>
               <h3 className="text-2xl font-bold text-emerald-400 mt-1">
-                {completedCount * 1.5} hrs
+                {Math.round(hoursStudied * 10) / 10} hrs
               </h3>
             </div>
             <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
@@ -260,26 +263,22 @@ export default function SessionsPage() {
         {/* 2. FILTER & SEARCH CONTROL BAR                            */}
         {/* ========================================================= */}
         <div className="bg-zinc-900/70 backdrop-blur-md border border-zinc-800/80 rounded-2xl p-4 shadow-lg shadow-zinc-900/50 flex flex-col md:flex-row items-center justify-between gap-4">
-          {/* Status Filter Buttons */}
           <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto">
-            {(["all", "upcoming", "completed", "cancelled"] as const).map(
-              (tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setFilter(tab)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition active:scale-95 capitalize border ${
-                    filter === tab
-                      ? "bg-emerald-500 text-black border-emerald-500 font-semibold shadow-sm"
-                      : "bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700"
-                  }`}
-                >
-                  {tab}
-                </button>
-              ),
-            )}
+            {(["all", "live", "upcoming", "completed", "cancelled"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setFilter(tab)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition active:scale-95 capitalize border ${
+                  filter === tab
+                    ? "bg-emerald-500 text-black border-emerald-500 font-semibold shadow-sm"
+                    : "bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
 
-          {/* Search Box */}
           <div className="relative w-full md:w-72">
             <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
             <input
@@ -295,20 +294,32 @@ export default function SessionsPage() {
         {/* ========================================================= */}
         {/* 3. SESSIONS LIST                                          */}
         {/* ========================================================= */}
-        {filteredSessions.length === 0 ? (
+        {loading && sessions.length === 0 && (
+          <p className="text-center text-xs text-zinc-500">Loading sessions...</p>
+        )}
+        {error && (
+          <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+            {error}
+          </p>
+        )}
+
+        {!loading && filteredSessions.length === 0 ? (
           <div className="bg-zinc-900/70 backdrop-blur-md border border-zinc-800/80 rounded-2xl p-12 text-center shadow-lg shadow-zinc-900/50">
             <FiAlertCircle className="w-8 h-8 text-zinc-500 mx-auto mb-2" />
             <h3 className="text-zinc-200 font-semibold text-sm">
-              No sessions match your search
+              {sessions.length === 0 ? "No sessions yet" : "No sessions match your search"}
             </h3>
             <p className="text-xs text-zinc-500 mt-1">
-              Try switching filters or scheduling a new session.
+              {sessions.length === 0
+                ? "Book your first session with a study buddy."
+                : "Try switching filters or scheduling a new session."}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredSessions.map((session) => {
-              const isUpcoming = session.status === "upcoming";
+              const isActive = session.status === "upcoming" || session.status === "live";
+              const isLive = session.status === "live";
               const isCancelled = session.status === "cancelled";
 
               return (
@@ -317,30 +328,29 @@ export default function SessionsPage() {
                   className={`bg-zinc-900/70 backdrop-blur-md border rounded-2xl p-5 shadow-lg shadow-zinc-900/50 flex flex-col justify-between transition-all duration-200 ${
                     isCancelled
                       ? "border-zinc-800/40 opacity-60"
-                      : "border-zinc-800/80 hover:border-zinc-700"
+                      : isLive
+                        ? "border-rose-500/40 shadow-rose-950/30"
+                        : session.status === "completed"
+                          ? "border-zinc-800/50 opacity-80"
+                          : "border-zinc-800/80 hover:border-zinc-700"
                   }`}
                 >
                   <div>
-                    {/* Top Row: Monospace ID & Status */}
+                    {/* Top Row: relative time & Status */}
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-[10px] text-zinc-400 bg-zinc-800 border border-zinc-700/50 px-2.5 py-0.5 rounded-full">
-                        {session.id}
+                        {isLive
+                          ? `ends ${formatRelative(session.ends_at, now)}`
+                          : formatRelative(session.starts_at, now)}
                       </span>
 
                       <span
-                        className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full border ${
-                          session.status === "upcoming"
-                            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                            : session.status === "completed"
-                              ? "bg-zinc-800 border-zinc-700 text-zinc-300"
-                              : "bg-red-500/10 border-red-500/20 text-red-400"
-                        }`}
+                        className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full border ${STATUS_STYLES[session.status]}`}
                       >
-                        {session.status.toUpperCase()}
+                        {isLive ? "● LIVE NOW" : session.status.toUpperCase()}
                       </span>
                     </div>
 
-                    {/* Session Title */}
                     <h3
                       className={`text-base font-semibold mt-3 ${isCancelled ? "text-zinc-500 line-through" : "text-zinc-100"}`}
                     >
@@ -350,17 +360,17 @@ export default function SessionsPage() {
                     {/* Buddy & Skill Meta */}
                     <div className="flex items-center gap-3 mt-2.5">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-semibold text-zinc-200">
-                          {session.buddyAvatar}
-                        </div>
+                        <Avatar name={session.partner_name} src={session.partner_avatar} />
                         <span className="text-xs text-zinc-300 font-medium">
-                          {session.buddyName}
+                          {session.partner_name}
                         </span>
                       </div>
 
-                      <span className="font-mono text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                        {session.skillTag}
-                      </span>
+                      {session.skill_tag && (
+                        <span className="font-mono text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                          {session.skill_tag}
+                        </span>
+                      )}
                     </div>
 
                     {session.notes && (
@@ -375,43 +385,45 @@ export default function SessionsPage() {
                     <div className="flex items-center gap-3 text-xs text-zinc-400 font-mono">
                       <span className="flex items-center gap-1.5">
                         <FiCalendar className="w-3.5 h-3.5 text-zinc-500" />
-                        {session.date}
+                        {formatDayLabel(session.starts_at)}
                       </span>
                       <span className="flex items-center gap-1.5">
                         <FiClock className="w-3.5 h-3.5 text-zinc-500" />
-                        {session.time}
+                        {formatTimeRange(session.starts_at, session.ends_at)}
                       </span>
                     </div>
 
-                    {/* Actions */}
-                    {isUpcoming && (
+                    {isActive && (
                       <div className="flex items-center gap-2 self-end sm:self-auto">
-                        <button
-                          onClick={() => openRescheduleModal(session)}
-                          className="px-2.5 py-1.5 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 text-xs transition border border-transparent hover:border-zinc-700 active:scale-95"
-                          title="Reschedule"
-                        >
-                          <FiEdit2 className="w-3.5 h-3.5" />
-                        </button>
-
-                        <button
-                          onClick={() => handleCancelSession(session.id)}
-                          className="px-2.5 py-1.5 rounded-xl text-zinc-400 hover:text-red-400 hover:bg-red-500/10 text-xs transition border border-transparent hover:border-red-500/20 active:scale-95"
-                        >
-                          Cancel
-                        </button>
-
-                        {session.meetLink && (
-                          <a
-                            href={session.meetLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-semibold rounded-xl transition active:scale-95 shadow-sm"
-                          >
-                            <FiVideo className="w-3.5 h-3.5" />
-                            <span>Join</span>
-                          </a>
+                        {!isLive && (
+                          <>
+                            <button
+                              onClick={() => openRescheduleModal(session)}
+                              className="px-2.5 py-1.5 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 text-xs transition border border-transparent hover:border-zinc-700 active:scale-95"
+                              title="Reschedule"
+                            >
+                              <FiEdit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleCancelSession(session.id)}
+                              className="px-2.5 py-1.5 rounded-xl text-zinc-400 hover:text-red-400 hover:bg-red-500/10 text-xs transition border border-transparent hover:border-red-500/20 active:scale-95"
+                            >
+                              Cancel
+                            </button>
+                          </>
                         )}
+
+                        <Link
+                          to={`/session/${session.id}/room`}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition active:scale-95 shadow-sm ${
+                            isLive
+                              ? "bg-rose-500 hover:bg-rose-400 text-white"
+                              : "bg-emerald-500 hover:bg-emerald-400 text-black"
+                          }`}
+                        >
+                          <FiVideo className="w-3.5 h-3.5" />
+                          <span>{isLive ? "Join now" : "Open room"}</span>
+                        </Link>
                       </div>
                     )}
                   </div>
@@ -441,106 +453,139 @@ export default function SessionsPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateSession} className="space-y-4 mt-4">
-              <div>
-                <label className="text-xs font-medium text-zinc-400 block mb-1">
-                  Session Topic / Goal
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. FastAPI Auth System Review"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full bg-black/60 border border-zinc-800 rounded-xl px-3.5 py-2 text-zinc-100 text-xs focus:border-zinc-600 focus:outline-none"
-                />
+            {connected.length === 0 ? (
+              <div className="py-8 text-center space-y-3">
+                <p className="text-sm text-zinc-300">You need a study buddy first.</p>
+                <p className="text-xs text-zinc-500">
+                  Sessions can only be booked with accepted buddies.
+                </p>
+                <Link
+                  to="/search"
+                  className="inline-block px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs rounded-xl"
+                >
+                  Find a buddy
+                </Link>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
+            ) : (
+              <form onSubmit={handleCreateSession} className="space-y-4 mt-4">
                 <div>
                   <label className="text-xs font-medium text-zinc-400 block mb-1">
-                    Study Partner
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Sarah Jenkins"
-                    value={newBuddy}
-                    onChange={(e) => setNewBuddy(e.target.value)}
-                    className="w-full bg-black/60 border border-zinc-800 rounded-xl px-3.5 py-2 text-zinc-100 text-xs focus:border-zinc-600 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-zinc-400 block mb-1">
-                    Skill Tag
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. FastAPI & Python"
-                    value={newSkill}
-                    onChange={(e) => setNewSkill(e.target.value)}
-                    className="w-full bg-black/60 border border-zinc-800 rounded-xl px-3.5 py-2 text-zinc-100 text-xs focus:border-zinc-600 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-zinc-400 block mb-1">
-                    Date
+                    Session Topic / Goal
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Aug 18, 2026"
-                    value={newDate}
-                    onChange={(e) => setNewDate(e.target.value)}
-                    className="w-full bg-black/60 border border-zinc-800 rounded-xl px-3.5 py-2 text-zinc-100 text-xs focus:border-zinc-600 focus:outline-none"
+                    placeholder="e.g. Revise Trees & Graph traversal"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    className={inputClass}
                   />
                 </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-zinc-400 block mb-1">
+                      Study Partner
+                    </label>
+                    <select
+                      required
+                      value={newBuddyId}
+                      onChange={(e) => setNewBuddyId(e.target.value)}
+                      className={inputClass}
+                    >
+                      {connected.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-zinc-400 block mb-1">
+                      Skill Tag
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Data Structures"
+                      value={newSkill}
+                      onChange={(e) => setNewSkill(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-zinc-400 block mb-1">Date</label>
+                    <input
+                      type="date"
+                      required
+                      min={toDateInput(new Date().toISOString())}
+                      value={newDate}
+                      onChange={(e) => setNewDate(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-zinc-400 block mb-1">Start</label>
+                    <input
+                      type="time"
+                      required
+                      value={newStart}
+                      onChange={(e) => setNewStart(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-zinc-400 block mb-1">End</label>
+                    <input
+                      type="time"
+                      required
+                      value={newEnd}
+                      onChange={(e) => setNewEnd(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-xs font-medium text-zinc-400 block mb-1">
-                    Time Range
+                    Agenda / Notes (optional)
                   </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 3:00 PM - 4:00 PM"
-                    value={newTime}
-                    onChange={(e) => setNewTime(e.target.value)}
-                    className="w-full bg-black/60 border border-zinc-800 rounded-xl px-3.5 py-2 text-zinc-100 text-xs focus:border-zinc-600 focus:outline-none"
+                  <textarea
+                    rows={2}
+                    placeholder="What will you cover together?"
+                    value={newNotes}
+                    onChange={(e) => setNewNotes(e.target.value)}
+                    className={`${inputClass} resize-none`}
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="text-xs font-medium text-zinc-400 block mb-1">
-                  Meeting Link (Google Meet / Zoom)
-                </label>
-                <input
-                  type="url"
-                  placeholder="https://meet.google.com/xyz-123"
-                  value={newMeetLink}
-                  onChange={(e) => setNewMeetLink(e.target.value)}
-                  className="w-full bg-black/60 border border-zinc-800 rounded-xl px-3.5 py-2 text-zinc-100 text-xs focus:border-zinc-600 focus:outline-none"
-                />
-              </div>
+                <p className="text-[11px] text-zinc-500 flex items-center gap-1.5">
+                  <FiVideo className="w-3.5 h-3.5 text-emerald-400" />A private video room is
+                  created automatically — no Meet link needed.
+                </p>
 
-              <div className="pt-3 flex justify-end gap-2 border-t border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-200 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs rounded-xl transition active:scale-95 shadow-sm"
-                >
-                  Confirm & Schedule
-                </button>
-              </div>
-            </form>
+                {formError && <p className="text-xs text-red-400">{formError}</p>}
+
+                <div className="pt-3 flex justify-end gap-2 border-t border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-200 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-black font-semibold text-xs rounded-xl transition active:scale-95 shadow-sm"
+                  >
+                    {busy ? "Scheduling..." : "Confirm & Schedule"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
@@ -548,20 +593,18 @@ export default function SessionsPage() {
       {/* ========================================================= */}
       {/* 5. MODAL: RESCHEDULE SESSION                              */}
       {/* ========================================================= */}
-      {isRescheduleModalOpen && selectedSession && (
+      {selectedSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-zinc-900 border border-zinc-700/50 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
             <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
               <div>
-                <h3 className="text-zinc-100 font-semibold text-sm">
-                  Reschedule Session
-                </h3>
+                <h3 className="text-zinc-100 font-semibold text-sm">Reschedule Session</h3>
                 <p className="text-[10px] font-mono text-zinc-400 mt-0.5">
                   {selectedSession.title}
                 </p>
               </div>
               <button
-                onClick={() => setIsRescheduleModalOpen(false)}
+                onClick={() => setSelectedSession(null)}
                 className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition"
               >
                 <FiX className="w-4 h-4" />
@@ -570,44 +613,55 @@ export default function SessionsPage() {
 
             <form onSubmit={handleRescheduleSubmit} className="space-y-4 mt-4">
               <div>
-                <label className="text-xs font-medium text-zinc-400 block mb-1">
-                  New Date
-                </label>
+                <label className="text-xs font-medium text-zinc-400 block mb-1">New Date</label>
                 <input
-                  type="text"
+                  type="date"
                   required
                   value={rescheduleDate}
                   onChange={(e) => setRescheduleDate(e.target.value)}
-                  className="w-full bg-black/60 border border-zinc-800 rounded-xl px-3.5 py-2 text-zinc-100 text-xs focus:border-zinc-600 focus:outline-none"
+                  className={inputClass}
                 />
               </div>
 
-              <div>
-                <label className="text-xs font-medium text-zinc-400 block mb-1">
-                  New Time Range
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={rescheduleTime}
-                  onChange={(e) => setRescheduleTime(e.target.value)}
-                  className="w-full bg-black/60 border border-zinc-800 rounded-xl px-3.5 py-2 text-zinc-100 text-xs focus:border-zinc-600 focus:outline-none"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-zinc-400 block mb-1">Start</label>
+                  <input
+                    type="time"
+                    required
+                    value={rescheduleStart}
+                    onChange={(e) => setRescheduleStart(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-zinc-400 block mb-1">End</label>
+                  <input
+                    type="time"
+                    required
+                    value={rescheduleEnd}
+                    onChange={(e) => setRescheduleEnd(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
               </div>
+
+              {formError && <p className="text-xs text-red-400">{formError}</p>}
 
               <div className="pt-3 flex justify-end gap-2 border-t border-zinc-800">
                 <button
                   type="button"
-                  onClick={() => setIsRescheduleModalOpen(false)}
+                  onClick={() => setSelectedSession(null)}
                   className="px-4 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-200 transition"
                 >
                   Dismiss
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs rounded-xl transition active:scale-95 shadow-sm"
+                  disabled={busy}
+                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-black font-semibold text-xs rounded-xl transition active:scale-95 shadow-sm"
                 >
-                  Save New Time
+                  {busy ? "Saving..." : "Save New Time"}
                 </button>
               </div>
             </form>

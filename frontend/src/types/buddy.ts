@@ -29,4 +29,9 @@ export interface ConnectionRequestRecord {
   message?: string | null;
   created_at: string;
   updated_at: string;
+  // Present on incoming requests (/connections/requested)
+  sender_name?: string;
+  sender_avatar?: string | null;
+  sender_headline?: string | null;
+  sender_subjects?: string[];
 }

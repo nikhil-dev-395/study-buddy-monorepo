@@ -9,6 +9,8 @@ export const envVariables = z.object({
   // Optional: once set, chat upgrades from polling to live Supabase Realtime.
   VITE_SUPABASE_URL: z.string().url().optional().or(z.literal("")),
   VITE_SUPABASE_ANON_KEY: z.string().optional().or(z.literal("")),
+  // Optional: Jitsi server for in-app study rooms (self-hosted or JaaS).
+  VITE_JITSI_DOMAIN: z.string().optional().or(z.literal("")),
 });
 
 export type TEnvVariables = z.infer<typeof envVariables>;

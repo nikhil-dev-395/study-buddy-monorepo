@@ -14,6 +14,7 @@ from app.routes.connection_route import router as connection_router
 from app.routes.search_route import router as search_router
 from app.routes.message_route import router as message_router
 from app.routes.ai_route import router as ai_router
+from app.routes.study_session_route import router as study_session_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -38,6 +39,7 @@ app.include_router(connection_router)
 app.include_router(search_router)
 app.include_router(message_router)
 app.include_router(ai_router)
+app.include_router(study_session_router)
 
 @app.get("/")
 async def root():

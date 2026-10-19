@@ -11,6 +11,7 @@ import {
   FiSmile,
 } from "react-icons/fi";
 import { HiOutlineSparkles } from "react-icons/hi2";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useMessages } from "../hooks/useMessages";
 
@@ -55,12 +56,24 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Auto-select the first conversation once the buddy list loads.
+  // Open the buddy from ?peer=<id> (Home / Buddies links), else the first conversation.
+  const [searchParams] = useSearchParams();
+  const requestedPeer = Number(searchParams.get("peer")) || null;
+  const appliedPeerRef = useRef<number | null>(null);
   useEffect(() => {
-    if (activePeerId === null && conversations.length > 0) {
+    if (conversations.length === 0) return;
+    // Apply ?peer once per value so clicking other chats isn't overridden.
+    if (requestedPeer && appliedPeerRef.current !== requestedPeer) {
+      appliedPeerRef.current = requestedPeer;
+      if (conversations.some((c) => c.peer_id === requestedPeer)) {
+        selectConversation(requestedPeer);
+        return;
+      }
+    }
+    if (activePeerId === null) {
       selectConversation(conversations[0].peer_id);
     }
-  }, [activePeerId, conversations, selectConversation]);
+  }, [activePeerId, conversations, selectConversation, requestedPeer]);
 
   useEffect(() => {
     scrollToBottom();

@@ -1,10 +1,31 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { FiCheck, FiClock, FiMessageCircle, FiX } from "react-icons/fi";
 import UserResult from "../components/search/User";
 import { useAuth } from "../hooks/useAuth";
 import { useBuddies, useConnectionActions } from "../hooks/useConnections";
+import { formatRelative } from "../utils/time";
 
 type Tab = "connected" | "sent" | "incoming";
+
+function SenderAvatar({ name, src }: { name: string; src?: string | null }) {
+  const [broken, setBroken] = useState(false);
+  if (src && !broken) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        onError={() => setBroken(true)}
+        className="w-11 h-11 rounded-full object-cover ring-2 ring-emerald-500/20"
+      />
+    );
+  }
+  return (
+    <div className="w-11 h-11 rounded-full bg-zinc-800 border border-zinc-700/60 flex items-center justify-center text-emerald-400 font-semibold">
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
 
 export default function BuddiesPage() {
   const { user } = useAuth();
@@ -20,14 +41,17 @@ export default function BuddiesPage() {
     void refresh();
   }, [refresh]);
 
+  // Accepted requests already appear under "My Buddies"; this tab is only what's still waiting.
+  const pendingSent = sent.filter((b) => !b.isRequestAccepted);
+
   const tabs: { key: Tab; label: string; count: number }[] = [
     { key: "connected", label: "My Buddies", count: connected.length },
-    { key: "sent", label: "Sent Requests", count: sent.length },
+    { key: "sent", label: "Requested", count: pendingSent.length },
     { key: "incoming", label: "Incoming", count: incoming.length },
   ];
 
   return (
-    <div className="mt-6 max-w-md mx-auto">
+    <div className="mt-6 max-w-md mx-auto px-4">
       <div className="flex items-center gap-2 bg-zinc-900/70 border border-zinc-800/80 rounded-2xl p-1.5 mb-6">
         {tabs.map((t) => (
           <button
@@ -41,7 +65,17 @@ export default function BuddiesPage() {
           >
             {t.label}
             {t.count > 0 && (
-              <span className="text-[10px] font-mono opacity-80">({t.count})</span>
+              <span
+                className={`min-w-4 h-4 px-1 rounded-full text-[10px] font-mono flex items-center justify-center ${
+                  tab === t.key
+                    ? "bg-black/20"
+                    : t.key === "incoming"
+                      ? "bg-emerald-500 text-black"
+                      : "bg-zinc-800"
+                }`}
+              >
+                {t.count}
+              </span>
             )}
           </button>
         ))}
@@ -69,8 +103,13 @@ export default function BuddiesPage() {
               year={buddy.academicDetails?.year ?? undefined}
               subjects={buddy.studyPreferences?.subjects}
               mode={buddy.studyPreferences?.mode}
+              statusBadge={
+                <span className="shrink-0 flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                  <FiCheck className="w-3 h-3" /> Buddy
+                </span>
+              }
               actionLabel="Message"
-              onAction={() => navigate("/chat")}
+              onAction={() => navigate(`/chat?peer=${buddy.id}`)}
             />
           ))}
         </div>
@@ -78,31 +117,40 @@ export default function BuddiesPage() {
 
       {!loading && tab === "sent" && (
         <div className="flex flex-col gap-4">
-          {sent.length === 0 && (
+          {pendingSent.length === 0 && (
             <p className="text-center text-xs text-zinc-500">
-              You haven't sent any requests yet.
+              No pending requests — everyone you asked has replied.
             </p>
           )}
-          {sent.map((buddy) => (
-            <UserResult
-              key={buddy.id}
-              userId={buddy.id}
-              name={buddy.name}
-              avatarUrl={buddy.avatarUrl ?? ""}
-              location={buddy.location ?? "Remote"}
-              institution={buddy.academicDetails?.institution ?? undefined}
-              major={buddy.academicDetails?.major ?? undefined}
-              year={buddy.academicDetails?.year ?? undefined}
-              subjects={buddy.studyPreferences?.subjects}
-              mode={buddy.studyPreferences?.mode}
-              actionLabel={buddy.isRequestAccepted ? "Accepted" : "Cancel"}
-              actionDisabled={buddy.isRequestAccepted}
-              actionLoading={busyId === buddy.connectionRequestId}
-              onAction={async () => {
-                await cancelRequest(buddy.connectionRequestId);
-                void refresh();
-              }}
-            />
+          {pendingSent.map((buddy) => (
+            <div key={buddy.id} className="opacity-90">
+              <UserResult
+                userId={buddy.id}
+                name={buddy.name}
+                avatarUrl={buddy.avatarUrl ?? ""}
+                location={buddy.location ?? "Remote"}
+                institution={buddy.academicDetails?.institution ?? undefined}
+                major={buddy.academicDetails?.major ?? undefined}
+                year={buddy.academicDetails?.year ?? undefined}
+                subjects={buddy.studyPreferences?.subjects}
+                mode={buddy.studyPreferences?.mode}
+                isSearching={false}
+                statusBadge={
+                  <span className="shrink-0 flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full border bg-amber-500/10 text-amber-400 border-amber-500/25">
+                    <FiClock className="w-3 h-3" /> Requested
+                  </span>
+                }
+                actionLabel="Withdraw"
+                actionLoading={busyId === buddy.connectionRequestId}
+                onAction={async () => {
+                  await cancelRequest(buddy.connectionRequestId);
+                  void refresh();
+                }}
+              />
+              <p className="text-[11px] text-zinc-500 text-center mt-1.5">
+                Waiting for {buddy.name.split(" ")[0]} to accept — you can message once they do.
+              </p>
+            </div>
           ))}
         </div>
       )}
@@ -110,47 +158,76 @@ export default function BuddiesPage() {
       {!loading && tab === "incoming" && (
         <div className="flex flex-col gap-3">
           {incoming.length === 0 && (
-            <p className="text-center text-xs text-zinc-500">
-              No incoming requests right now.
-            </p>
+            <p className="text-center text-xs text-zinc-500">No incoming requests right now.</p>
           )}
-          {incoming.map((req) => (
-            <div
-              key={req.id}
-              className="p-4 rounded-2xl bg-zinc-900/70 border border-zinc-800/80 flex items-center justify-between gap-3"
-            >
-              <div className="min-w-0">
-                <p className="text-sm text-zinc-100 font-semibold">
-                  User #{req.sender_id}
-                </p>
+          {incoming.map((req) => {
+            const name = req.sender_name ?? `User #${req.sender_id}`;
+            return (
+              <div
+                key={req.id}
+                className="p-4 rounded-2xl bg-zinc-900/70 border border-emerald-500/20 space-y-3"
+              >
+                <div className="flex items-center gap-3">
+                  <button onClick={() => navigate(`/profile/${req.sender_id}`)}>
+                    <SenderAvatar name={name} src={req.sender_avatar} />
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-zinc-100 font-semibold truncate">
+                      {name}
+                      <span className="ml-2 text-[10px] font-normal text-zinc-500">
+                        {formatRelative(req.created_at)}
+                      </span>
+                    </p>
+                    <p className="text-xs text-zinc-400 truncate">
+                      {req.sender_headline || "wants to study with you"}
+                    </p>
+                  </div>
+                </div>
+
                 {req.message && (
-                  <p className="text-xs text-zinc-400 truncate mt-0.5">{req.message}</p>
+                  <p className="text-xs text-zinc-300 bg-black/40 border border-zinc-800 rounded-xl p-2.5">
+                    “{req.message}”
+                  </p>
                 )}
+
+                {req.sender_subjects && req.sender_subjects.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {req.sender_subjects.map((s) => (
+                      <span
+                        key={s}
+                        className="text-[10px] px-2 py-0.5 rounded-md bg-zinc-800/80 text-emerald-400 border border-emerald-500/20"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={busyId === req.id}
+                    onClick={async () => {
+                      await rejectRequest(req.id);
+                      void refresh();
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-xs transition active:scale-95 disabled:opacity-40"
+                  >
+                    <FiX className="w-3.5 h-3.5" /> Decline
+                  </button>
+                  <button
+                    disabled={busyId === req.id}
+                    onClick={async () => {
+                      await acceptRequest(req.id);
+                      void refresh();
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs transition active:scale-95 disabled:opacity-40"
+                  >
+                    <FiMessageCircle className="w-3.5 h-3.5" /> Accept
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  disabled={busyId === req.id}
-                  onClick={async () => {
-                    await rejectRequest(req.id);
-                    void refresh();
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-xs transition active:scale-95 disabled:opacity-40"
-                >
-                  Reject
-                </button>
-                <button
-                  disabled={busyId === req.id}
-                  onClick={async () => {
-                    await acceptRequest(req.id);
-                    void refresh();
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs transition active:scale-95 disabled:opacity-40"
-                >
-                  Accept
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

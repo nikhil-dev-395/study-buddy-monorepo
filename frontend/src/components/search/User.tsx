@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 export type UserResultProps = {
   name: string;
@@ -24,6 +24,8 @@ export type UserResultProps = {
   actionDisabled?: boolean;
   actionLoading?: boolean;
   onAction?: (userId: string | number | null) => void;
+  /** Replaces the study-mode pill, e.g. a "Requested" badge on the Buddies page. */
+  statusBadge?: ReactNode;
 };
 
 export default function UserResult({
@@ -45,6 +47,7 @@ export default function UserResult({
   actionDisabled = false,
   actionLoading = false,
   onAction,
+  statusBadge,
 }: UserResultProps) {
   const [imgError, setImgError] = useState(false);
   const initial = name ? name.charAt(0).toUpperCase() : "?";
@@ -112,13 +115,13 @@ export default function UserResult({
         </div>
 
         {/* Study Mode Badge */}
-        <span
+        {statusBadge ?? <span
           className={`shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full border capitalize ${
             modeStyles[mode] || modeStyles.online
           }`}
         >
           {mode}
-        </span>
+        </span>}
       </div>
 
       {/* Bio */}

@@ -18,11 +18,20 @@ export interface QuizQuestion {
   explanation: string;
 }
 
+export interface Flashcard {
+  front: string;
+  back: string;
+}
+
 export interface NotesSummary {
   overview: string;
   keyPoints: string[];
   actionItems: string[];
+  flashcards?: Flashcard[];
 }
+
+export type QuizDifficulty = "easy" | "medium" | "hard";
+type AiTool = "roadmap" | "quiz" | "summarize" | "tutor";
 
 export interface TutorMessage {
   sender: "user" | "ai";
@@ -39,45 +48,54 @@ async function postAi<T>(path: string, body: unknown): Promise<T> {
   return json.data as T;
 }
 
+/** Each tool tracks its own loading/error so one tab's request doesn't block another. */
 export function useAiSuite() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<Partial<Record<AiTool, boolean>>>({});
+  const [errors, setErrors] = useState<Partial<Record<AiTool, string | null>>>({});
 
-  const run = useCallback(async <T,>(fn: () => Promise<T>): Promise<T | null> => {
-    try {
-      setLoading(true);
-      setError(null);
-      return await fn();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "AI request failed.");
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const run = useCallback(
+    async <T,>(tool: AiTool, fn: () => Promise<T>): Promise<T | null> => {
+      try {
+        setLoading((l) => ({ ...l, [tool]: true }));
+        setErrors((e) => ({ ...e, [tool]: null }));
+        return await fn();
+      } catch (err) {
+        setErrors((e) => ({
+          ...e,
+          [tool]: err instanceof Error ? err.message : "AI request failed.",
+        }));
+        return null;
+      } finally {
+        setLoading((l) => ({ ...l, [tool]: false }));
+      }
+    },
+    [],
+  );
 
   const generateRoadmap = useCallback(
     (goal: string, days: number) =>
-      run(() => postAi<{ phases: RoadmapPhase[] }>("roadmap", { goal, days })),
+      run("roadmap", () => postAi<{ phases: RoadmapPhase[] }>("roadmap", { goal, days })),
     [run],
   );
 
   const generateQuiz = useCallback(
-    (topic: string, count = 5) =>
-      run(() => postAi<{ questions: QuizQuestion[] }>("quiz", { topic, count })),
+    (topic: string, count = 5, difficulty: QuizDifficulty = "medium") =>
+      run("quiz", () =>
+        postAi<{ questions: QuizQuestion[] }>("quiz", { topic, count, difficulty }),
+      ),
     [run],
   );
 
   const summarizeNotes = useCallback(
-    (notes: string) => run(() => postAi<NotesSummary>("summarize", { notes })),
+    (notes: string) => run("summarize", () => postAi<NotesSummary>("summarize", { notes })),
     [run],
   );
 
   const askTutor = useCallback(
     (message: string, history: TutorMessage[]) =>
-      run(() => postAi<{ reply: string }>("tutor", { message, history })),
+      run("tutor", () => postAi<{ reply: string }>("tutor", { message, history })),
     [run],
   );
 
-  return { loading, error, generateRoadmap, generateQuiz, summarizeNotes, askTutor };
+  return { loading, errors, generateRoadmap, generateQuiz, summarizeNotes, askTutor };
 }
