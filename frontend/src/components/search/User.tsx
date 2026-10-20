@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { useState, type ReactNode } from "react";
 
 export type UserResultProps = {
@@ -54,6 +55,7 @@ export default function UserResult({
   secondaryActionLabel,
   onSecondaryAction,
 }: UserResultProps) {
+  const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
   const initial = name ? name.charAt(0).toUpperCase() : "?";
 
@@ -73,7 +75,10 @@ export default function UserResult({
     <div className="w-full max-w-md mx-auto mt-4 p-5 rounded-2xl bg-zinc-900/70 border border-zinc-800/80 backdrop-blur-md shadow-lg transition-all duration-300 hover:border-zinc-700/80 hover:shadow-zinc-900/50">
       {/* Top Header Section */}
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3.5 min-w-0">
+        <div
+          className={`flex items-center gap-3.5 min-w-0 ${userId ? "cursor-pointer" : ""}`}
+          onClick={() => userId && navigate(`/profile/${userId}`)}
+        >
           {/* Avatar with Status Indicator */}
           <div className="relative shrink-0">
             {!imgError && avatarUrl ? (
@@ -82,7 +87,6 @@ export default function UserResult({
                 alt={name}
                 onError={() => setImgError(true)}
                 className="w-12 h-12 rounded-full object-cover ring-2 ring-emerald-500/20 shadow-sm"
-                onClick={() => onAction && onAction(userId)}
               />
             ) : (
               <div className="w-12 h-12 rounded-full bg-zinc-800 border border-zinc-700/60 flex items-center justify-center text-emerald-400 font-semibold text-lg shadow-inner">

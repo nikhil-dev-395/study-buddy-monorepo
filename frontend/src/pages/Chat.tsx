@@ -11,7 +11,7 @@ import {
   FiSmile,
 } from "react-icons/fi";
 import { HiOutlineSparkles } from "react-icons/hi2";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useMessages } from "../hooks/useMessages";
 
@@ -31,6 +31,7 @@ function formatTime(iso: string | null) {
 }
 
 export default function ChatPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
@@ -204,7 +205,10 @@ export default function ChatPage() {
           {activeConversation ? (
             <>
               <div className="px-5 py-3.5 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-900/40">
-                <div className="flex items-center gap-3">
+                <div
+                  className="flex items-center gap-3 cursor-pointer"
+                  onClick={() => navigate(`/profile/${activeConversation.peer_id}`)}
+                >
                   {activeConversation.avatar_url ? (
                     <img
                       src={activeConversation.avatar_url}
